@@ -6,6 +6,11 @@ import routeRoutes from '../v1/routes/routes.js';
 import permissionRoutes from '../v1/permissions/routes.js';
 import menuRoutes from '../v1/menus/routes.js';
 import submenuRoutes from '../v1/submenus/routes.js';
+import documenTypeRoutes from '../v1/documentTypes/routes.js';
+import departmentRoutes from '../v1/departments/routes.js';
+import municipalityRoutes from '../v1/municipalities/routes.js';
+import activityRoutes from '../v1/activities/routes.js';
+import customerRoutes from '../v1/customers/routes.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = Router();
@@ -17,5 +22,10 @@ router.use('/routes', [authenticateToken], routeRoutes);
 router.use('/permissions', [authenticateToken], permissionRoutes);
 router.use('/menus', [authenticateToken], menuRoutes);
 router.use('/submenus', [authenticateToken], submenuRoutes);
+router.use('/document_types', [authenticateToken], documenTypeRoutes);
+router.use('/departments', [authenticateToken], departmentRoutes);
+router.use('/municipalities', [authenticateToken], municipalityRoutes);
+router.use('/activities', [authenticateToken], activityRoutes);
+router.use('/customers', [authenticateToken], customerRoutes);
 
 export default router;

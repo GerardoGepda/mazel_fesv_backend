@@ -2,7 +2,7 @@ import odbc from "odbc";
 
 export async function getOdbcConnection() {
     try {
-        const connectionString = process.env.NODE_ODBC_CONNECTION;
+        const connectionString = process.env.ODBC_CONNECTION;
         const connection = await odbc.connect(connectionString);
         
         return connection;
