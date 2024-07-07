@@ -100,5 +100,6 @@ export default {
     update: {
         ...validations.params,
         ...validations.body
-    }
+    },
+    delete: validations.params,
 };
