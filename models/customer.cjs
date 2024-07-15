@@ -17,6 +17,7 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Customer.init({
+    oldId: DataTypes.STRING(50),
     documentNumber: DataTypes.STRING(50),
     name: DataTypes.STRING(200),
     comercialName: DataTypes.STRING(200),

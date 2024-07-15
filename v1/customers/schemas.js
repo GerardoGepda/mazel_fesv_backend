@@ -1,5 +1,19 @@
 const validations = {
     body: {
+        oldId: {
+            in: ['body'],
+            exists: {
+                errorMessage: 'Ingrese un id de control'
+            },
+            isString: {
+                errorMessage: 'El id de control debe ser una cadena de texto'
+            },
+            isLength: {
+                options: { max: 50 },
+                errorMessage: 'El id de control debe tener un máximo de 50 caracteres'
+            },
+            trim: true
+        },
         documentNumber: {
             in: ['body'],
             exists: {

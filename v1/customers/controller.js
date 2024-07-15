@@ -9,8 +9,7 @@ export const getCustomers = async (_, res) => {
             include: [
                 { model: db.DocumentType, attributes: ['id', 'name'] },
                 { 
-                    model: db.Municipality, 
-                    attributes: ['id', 'name'],
+                    model: db.Municipality,
                     include: { model: db.Department, attributes: ['id', 'name'] }
                 },
             ]
@@ -24,13 +23,9 @@ export const getCustomers = async (_, res) => {
 
 export const getCustomerOdbcByDocument = async (req, res) => {
     try {
-        // wating 5 seconds
         const connection = await getOdbcConnection();
         const result = await connection.query(`SELECT CustomerID as id, Customer_Bill_Name as name, eMail_Address as email FROM customers WHERE CustomerID = '${req.params.id}'`);
-        const data = result.map(row => {
-            delete row.columns;
-            return row;
-        });
+
         // Cierra la conexión
         await connection.close();
         return res.json({message: '¡Busqueda completada!', customer: result[0] || null});
@@ -59,8 +54,7 @@ export const createCustomer = async (req, res) => {
             include: [
                 { model: db.DocumentType, attributes: ['id', 'name'] },
                 { 
-                    model: db.Municipality, 
-                    attributes: ['id', 'name'],
+                    model: db.Municipality,
                     include: { model: db.Department, attributes: ['id', 'name'] }
                 },
             ]
@@ -92,13 +86,12 @@ export const updateCustomer = async (req, res) => {
             include: [
                 { model: db.DocumentType, attributes: ['id', 'name'] },
                 { 
-                    model: db.Municipality, 
-                    attributes: ['id', 'name'],
+                    model: db.Municipality,
                     include: { model: db.Department, attributes: ['id', 'name'] }
                 },
             ]
         });
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        
         return res.json({ message: '¡Cliente actualizado con éxito!', customer });
     } catch (error) {
         console.log(error);
