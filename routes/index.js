@@ -11,6 +11,7 @@ import departmentRoutes from '../v1/departments/routes.js';
 import municipalityRoutes from '../v1/municipalities/routes.js';
 import activityRoutes from '../v1/activities/routes.js';
 import customerRoutes from '../v1/customers/routes.js';
+import fceRoutes from '../v1/fce/routes.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = Router();
@@ -27,5 +28,6 @@ router.use('/departments', [authenticateToken], departmentRoutes);
 router.use('/municipalities', [authenticateToken], municipalityRoutes);
 router.use('/activities', [authenticateToken], activityRoutes);
 router.use('/customers', [authenticateToken], customerRoutes);
+router.use('/fce', [authenticateToken], fceRoutes)
 
 export default router;

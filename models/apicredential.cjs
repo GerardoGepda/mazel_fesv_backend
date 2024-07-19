@@ -22,10 +22,10 @@ module.exports = (sequelize, DataTypes) => {
     user: DataTypes.STRING(50),
     password: DataTypes.STRING(50),
     token: DataTypes.TEXT,
-    tokenExpire: DataTypes.INTEGER,
+    tokenExpire: DataTypes.BIGINT,
     response: DataTypes.TEXT,
     refreshToken: DataTypes.TEXT,
-    refreshTokenExpire: DataTypes.INTEGER,
+    refreshTokenExpire: DataTypes.BIGINT,
   }, {
     sequelize,
     modelName: 'ApiCredential',
