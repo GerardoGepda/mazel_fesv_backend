@@ -4,8 +4,9 @@ import { getOdbcConnection } from "../../database/connectionOdbc.js";
 import { validationResult } from 'express-validator';
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR } from "../../utils/httpStatusCodes.js";
 import { dteFc } from "../../helpers/jsonBuilder.js";
-import { dteSign, loginMHApi } from "../../helpers/feApis.js";
+import { dteSign, loginMHApi, sendEmail } from "../../helpers/feApis.js";
 import { incrementCorrelative } from "../../helpers/correlatives.js";
+import dayjs from "dayjs";
 
 export const getInvoicesOdbcByDateRange = async (req, res) => {
     try {
@@ -78,15 +79,38 @@ export const sendFceToMh = async (req, res) => {
             //incrementing the correlative
             await incrementCorrelative(dte.identificacion.tipoDte);
 
+            // adding stamp to dteJson
+            dte.identificacion.selloRecibido = result.data.selloRecibido;
+
+            const customer = await db.Customer.findOne({ where: { oldId: doc[0].CustomerID } });
+
             //saving the document
+            await db.Document.create({
+                generationCode: dte.identificacion.codigoGeneracion,
+                controlNumber: dte.identificacion.numeroControl,
+                receivedStamp: result.data.selloRecibido,
+                dteType: dte.identificacion.tipoDte,
+                dateEmitted: dte.identificacion.fecEmi,
+                dateProcessed: dayjs().format("YYYY-MM-DD"),
+                dteJson: JSON.stringify(dte),
+                mhResponse: JSON.stringify(result.data),
+                state: 1,
+                customerId: customer.id
+            });
 
             //saving the result of the transaction
             mhResultSuccess.push({ doc, response: {...result.data, numeroControl: dte.identificacion.numeroControl} });
             //sending email
+            try {
+                sendEmail(dte);
+            } catch (error) {
+                console.log(error);
+            }
         }
 
         return res.status(200).json({ message: "Transacción exitosa.", result: { success: mhResultSuccess, error: mhResultError } });
     } catch (error) {
+        console.log(error);
         return res.status(INTERNAL_SERVER_ERROR).json({ message: typeof error === 'string' ? error :  'Error al enviar documentos al MH.'});
     }
 };

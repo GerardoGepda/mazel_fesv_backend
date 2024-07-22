@@ -59,38 +59,41 @@ export const dteFc = async (data, emissionDate = '') => {
         // getting emisro data
         const emisor = await dteEmisor("01");
 
-        // retriving customer info from db
-        const customer = await db.Customer.findOne({
-            include: [
-                { model: db.DocumentType, attributes: ['id', 'name', 'codeMH'] },
-                { 
-                    model: db.Municipality,
-                    include: { model: db.Department, attributes: ['id', 'name', 'codeMH'] }
+        let receptor = null;
+        if (data[0].CustomerID !== 'CONSUMIDOR FINAL') {
+            // retriving customer info from db
+            const customer = await db.Customer.findOne({
+                include: [
+                    { model: db.DocumentType, attributes: ['id', 'name', 'codeMH'] },
+                    { 
+                        model: db.Municipality,
+                        include: { model: db.Department, attributes: ['id', 'name', 'codeMH'] }
+                    },
+                    { model: db.Activity, required: false }
+                ],
+                where: { oldId: data[0].CustomerID }
+            });
+
+            if (!customer) {
+                throw "No se encontró regsitro de cliente para el documento.";
+            }
+
+            receptor = {
+                "tipoDocumento": customer.DocumentType.codeMH,
+                "numDocumento": customer.DocumentType.codeMH == '36' ? customer.documentNumber.replace(/-/g, '') : customer.documentNumber,
+                "nrc": customer.nrc || null,
+                "nombre": customer.name,
+                "codActividad": customer.Activity ? customer.Activity.codeMH : null,
+                "descActividad": customer.Activity ? customer.Activity.name : null,
+                "direccion": {
+                    "departamento": customer.Municipality.Department.codeMH,
+                    "municipio": customer.Municipality.codeMH,
+                    "complemento": customer.address
                 },
-                { model: db.Activity, required: false }
-            ],
-            where: { oldId: data[0].CustomerID }
-        });
-
-        if (!customer) {
-            throw "No se encontró regsitro de cliente para el documento.";
+                "telefono": customer.phone || null,
+                "correo": customer.email
+            };   
         }
-
-        const receptor = {
-            "tipoDocumento": customer.DocumentType.codeMH,
-            "numDocumento": customer.DocumentType.codeMH == '36' ? customer.documentNumber.replace(/-/g, '') : customer.documentNumber,
-            "nrc": customer.nrc || null,
-            "nombre": customer.name,
-            "codActividad": customer.Activity ? customer.Activity.codeMH : null,
-            "descActividad": customer.Activity ? customer.Activity.name : null,
-            "direccion": {
-                "departamento": customer.Municipality.Department.codeMH,
-                "municipio": customer.Municipality.codeMH,
-                "complemento": customer.address
-            },
-            "telefono": customer.phone || null,
-            "correo": customer.email
-        };
 
         const facBody = data.map((line, i) => {
             return {

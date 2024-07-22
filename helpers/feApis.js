@@ -12,7 +12,7 @@ export const dteSign = async (dte) => {
         if (!api) {
             throw "No se encontró registro del firmador.";
         }
-        
+
         const data = {
             "nit": api.user,
             "activo": true,
@@ -75,3 +75,22 @@ export const loginMHApi = async () => {
 
     return token;
 }
+
+//function to send email
+export const sendEmail = async (dte) => {
+    const options = {
+        headers: {
+            "content-type": "application/json",
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST',
+        }
+    };
+
+    const data = {
+        typeDocument: parseInt(dte.identificacion.tipoDte),
+        dte
+    }
+
+    const response = await axios.post(`${process.env.MH_FE_EMAIL_API_URL}/send-email`, data, options);
+    return response.data;
+};
