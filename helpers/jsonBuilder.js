@@ -104,12 +104,12 @@ export const dteFc = async (data, emissionDate = '') => {
                 "codTributo": null,
                 "uniMedida": 59,
                 "descripcion": line.ItemDescription,
-                "precioUni": parseFloat((line.PrecioUnitario + line.IVAUnitario).toFixed(4)),
+                "precioUni": parseFloat((line.PrecioUnitario * (parseFloat(line.IVATotal) ? 1.13 : 1)).toFixed(4)),
                 "montoDescu": 0, //preguntar
                 "ventaNoSuj": 0.00,
-                "ventaExenta": parseFloat(line.IVATotal) ? 0 : parseFloat(((line.PrecioUnitario * line.Quantity) + line.IVAUnitario).toFixed(4)), //preguntar
-                "ventaGravada": parseFloat(line.IVATotal) ? parseFloat(((line.PrecioUnitario * line.Quantity) + line.IVAUnitario).toFixed(4)) : 0,
-                "ivaItem": parseFloat((line.IVAUnitario).toFixed(4)),
+                "ventaExenta": parseFloat(line.IVATotal) ? 0 : parseFloat(((line.PrecioUnitario * line.Quantity) + line.IVALinea).toFixed(4)), //preguntar
+                "ventaGravada": parseFloat(line.IVATotal) ? parseFloat(((line.PrecioUnitario * line.Quantity) + line.IVALinea).toFixed(4)) : 0,
+                "ivaItem": parseFloat((line.IVALinea).toFixed(4)),
                 "tributos": null,
                 "psv": 0.00,
                 "noGravado": 0.00,
@@ -139,7 +139,7 @@ export const dteFc = async (data, emissionDate = '') => {
                 "version": 1,
                 "ambiente": api.sandbox ? '00' : '01',
                 "tipoDte": "01",
-                "numeroControl": `DTE-01-M001P001-${(correlative.actual + 1).toString().padStart(15, '0')}`,
+                "numeroControl": `DTE-01-M001P002-${(correlative.actual + 1).toString().padStart(15, '0')}`,
                 "codigoGeneracion": crypto.randomUUID().toUpperCase(),
                 // modelo previo
                 "tipoModelo": 1,
