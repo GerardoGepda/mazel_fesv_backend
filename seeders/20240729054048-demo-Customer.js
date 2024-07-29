@@ -12,32 +12,20 @@ module.exports = {
      *   isBetaMember: false
      * }], {});
     */
-    await queryInterface.bulkInsert('Routes', [
+    await queryInterface.bulkInsert('Customers', [
       {
-        name: 'Menús',
-        path: 'settings/menu-management',
+        documentNumber: '',
+        name: 'CONSUMIDOR FINAL',
+        comercialName: '',
+        nrc: null,
+        email: '',
+        phone: null,
+        address: '',
         state: 1,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      },
-      {
-        name: 'Clientes',
-        path: 'customers',
-        state: 1,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      },
-      {
-        name: 'Facturas y CCF',
-        path: 'fc_ccf',
-        state: 1,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      },
-      {
-        name: 'Sujetos Excluidos',
-        path: 'se',
-        state: 1,
+        activityId: null,
+        municipalityId: 1,
+        documentTypeId: 1,
+        oldId: 'CONSUMIDOR FINAL',
         createdAt: new Date(),
         updatedAt: new Date()
       },

@@ -45,6 +45,16 @@ module.exports = {
         roleId: 3,
         createdAt: new Date(),
         updatedAt: new Date()
+      },
+      {
+        firstName: 'Prueba',
+        lastName: 'Cipsa',
+        email: 'prueba@cipsa.com.sv',
+        password: bycrypt.hashSync('123456', 12),
+        state: 1,
+        roleId: 3,
+        createdAt: new Date(),
+        updatedAt: new Date()
       }
     ], {}
     );

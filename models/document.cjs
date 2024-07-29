@@ -22,6 +22,7 @@ module.exports = (sequelize, DataTypes) => {
     dateEmitted: DataTypes.DATEONLY,
     dateProcessed: DataTypes.DATEONLY,
     state: DataTypes.INTEGER,
+    referenceId: DataTypes.INTEGER,
     dteJson: DataTypes.TEXT,
     mhResponse: DataTypes.TEXT,
   }, {

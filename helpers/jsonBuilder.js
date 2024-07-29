@@ -56,7 +56,7 @@ const dteEmisor = async (tipoDocumento = "01") => {
 //function to create the dte FC json
 export const dteFc = async (data, emissionDate = '') => {
     try {
-        // getting emisro data
+        // getting emisor data
         const emisor = await dteEmisor("01");
 
         let receptor = null;
@@ -95,7 +95,7 @@ export const dteFc = async (data, emissionDate = '') => {
             };   
         }
 
-        const facBody = data.map((line, i) => {
+        const docBody = data.map((line, i) => {
             return {
                 "numItem": i + 1,
                 "tipoItem": parseInt(line.TipoItem),
@@ -104,11 +104,11 @@ export const dteFc = async (data, emissionDate = '') => {
                 "codTributo": null,
                 "uniMedida": 59,
                 "descripcion": line.ItemDescription,
-                "precioUni": parseFloat((line.PrecioUnitario * (parseFloat(line.IVATotal) ? 1.13 : 1)).toFixed(4)),
+                "precioUni": parseFloat((line.PrecioUnitario * (parseFloat(line.IVALinea) ? 1.13 : 1)).toFixed(4)),
                 "montoDescu": 0, //preguntar
                 "ventaNoSuj": 0.00,
-                "ventaExenta": parseFloat(line.IVATotal) ? 0 : parseFloat(((line.PrecioUnitario * line.Quantity) + line.IVALinea).toFixed(4)), //preguntar
-                "ventaGravada": parseFloat(line.IVATotal) ? parseFloat(((line.PrecioUnitario * line.Quantity) + line.IVALinea).toFixed(4)) : 0,
+                "ventaExenta": parseFloat(line.IVALinea) ? 0 : parseFloat(((line.PrecioUnitario * line.Quantity) + line.IVALinea).toFixed(4)), //preguntar
+                "ventaGravada": parseFloat(line.IVALinea) ? parseFloat(((line.PrecioUnitario * line.Quantity) + line.IVALinea).toFixed(4)) : 0,
                 "ivaItem": parseFloat((line.IVALinea).toFixed(4)),
                 "tributos": null,
                 "psv": 0.00,
@@ -151,12 +151,12 @@ export const dteFc = async (data, emissionDate = '') => {
                 "horEmi": dayjs().format("HH:mm:ss"),
                 "tipoMoneda": "USD"
             },
-            "documentoRelacionado":null,
             "emisor": emisor,
             "receptor": receptor,
+            "documentoRelacionado":null,
             "otrosDocumentos":null,
             "ventaTercero": null,
-            "cuerpoDocumento": facBody,
+            "cuerpoDocumento": docBody,
             "resumen":{
                 "totalNoSuj": 0,
                 "totalExenta": parseFloat(data[0].IVATotal) ? 0 : parseFloat((data[0].DocTotal).toFixed(2)),
@@ -180,7 +180,7 @@ export const dteFc = async (data, emissionDate = '') => {
                 "condicionOperacion": 1,
                 "pagos": [
                     {
-                        "montoPago":parseFloat((data[0].DocTotal).toFixed(2)),
+                        "montoPago": parseFloat((data[0].DocTotal).toFixed(2)),
                         "codigo": "01",
                         "referencia": 'Efectivo',
                         "plazo": null,
@@ -197,6 +197,152 @@ export const dteFc = async (data, emissionDate = '') => {
                 "observaciones": null,    
                 "placaVehiculo": null   
             },
+            "apendice": null
+        };
+    } catch (error) {
+        throw typeof error === "string" ? error : "Error al generar el JSON del documento.";
+    }
+}
+
+export const dteCcf = async (data, emissionDate = '') => {
+    try {
+        // getting emisor data
+        const emisor = await dteEmisor("03");
+
+        let receptor = null;
+        if (data[0].CustomerID !== 'CONSUMIDOR FINAL') {
+            // retriving customer info from db
+            const customer = await db.Customer.findOne({
+                include: [
+                    { model: db.DocumentType, attributes: ['id', 'name', 'codeMH'] },
+                    { 
+                        model: db.Municipality,
+                        include: { model: db.Department, attributes: ['id', 'name', 'codeMH'] }
+                    },
+                    { model: db.Activity, required: false }
+                ],
+                where: { oldId: data[0].CustomerID }
+            });
+
+            if (!customer) {
+                throw "No se encontró regsitro de cliente para el documento.";
+            }
+
+            receptor = {
+                "nit": customer.documentNumber.replace(/-/g, ''),
+                "nrc": customer.nrc || null,
+                "nombre": customer.name,
+                "codActividad": customer.Activity ? customer.Activity.codeMH : null,
+                "descActividad": customer.Activity ? customer.Activity.name : null,
+                "nombreComercial": null,
+                "direccion": {
+                    "departamento": customer.Municipality.Department.codeMH,
+                    "municipio": customer.Municipality.codeMH,
+                    "complemento": customer.address
+                },
+                "telefono": customer.phone || null,
+                "correo": customer.email
+            };
+        }
+
+        // body of de document
+        const docBody = data.map((line, i) => {
+            return {
+                "numItem": i + 1,
+                "tipoItem": parseInt(line.TipoItem),
+                "numeroDocumento": null,
+                "codigo": line.ItemID,
+                "codTributo": null,
+                "descripcion": line.ItemDescription,
+                "cantidad": parseFloat((line.Quantity).toFixed(2)),
+                "uniMedida": 59,
+                "precioUni": parseFloat((line.PrecioUnitario).toFixed(4)),
+                "montoDescu": 0, //preguntar
+                "ventaNoSuj": 0.00,
+                "ventaExenta": parseFloat(line.IVALinea) ? 0 : parseFloat((line.PrecioUnitario * line.Quantity).toFixed(4)), //preguntar
+                "ventaGravada": parseFloat(line.IVALinea) ? parseFloat((line.PrecioUnitario * line.Quantity).toFixed(4)) : 0,
+                "tributos": parseFloat(line.IVALinea) > 0 ? ["20"] : null,
+                "psv": 0.00,
+                "noGravado": 0.00,
+            }
+        });
+
+        //getting correlative
+        const correlative = await getCorrelativeForCodeMH("03");
+
+        if (!correlative) {
+            throw 'No se encontró registro de correaltivo (tipo: 03)';
+        }
+
+        if (correlative.final == correlative.actual) {
+            throw 'Se ha alcanzado el limite de correlativos';
+        }
+
+        const api = await db.ApiCredential.findOne({ where: { code: 'MH_FE_API' } }); // api info
+
+        if (!api) {
+            throw "No se encontró registro de api del MH para FE.";
+        }
+
+        return {
+            "identificacion": {
+                "version": 3,
+                "ambiente": api.sandbox ? '00' : '01',
+                "tipoDte": "03",
+                "numeroControl": `DTE-03-M001P001-${(correlative.actual + 1).toString().padStart(15, '0')}`,
+                "codigoGeneracion": crypto.randomUUID().toUpperCase(),
+                "tipoModelo": 1,
+                "tipoOperacion": 1,
+                "tipoContingencia": null,
+                "motivoContin": null,
+                "fecEmi": emissionDate,
+                "horEmi": dayjs().format("HH:mm:ss"),
+                "tipoMoneda": "USD"
+            },
+            "emisor": emisor,
+            "receptor": receptor,
+            "documentoRelacionado":null,
+            "otrosDocumentos":null,
+            "ventaTercero": null,
+            "cuerpoDocumento": docBody,
+            "resumen":{
+                "totalNoSuj": 0,
+                "totalExenta": parseFloat(data[0].IVATotal) ? 0 : parseFloat((data[0].DocTotal).toFixed(2)),
+                "totalGravada": parseFloat(data[0].IVATotal) ? parseFloat((data[0].DocTotal - data[0].IVATotal).toFixed(2)) : 0,
+                "subTotalVentas": parseFloat((data[0].DocTotal - data[0].IVATotal).toFixed(2)),
+                "descuNoSuj": 0,
+                "descuExenta": 0,
+                "descuGravada":0 , //preguntar
+                "porcentajeDescuento": 0,
+                "totalDescu": 0 , //preguntar
+                "tributos": parseFloat(data[0].IVATotal) ? [{
+                    "codigo": "20",
+                    "descripcion": "Impuesto al Valor Agregado 13%",
+                    "valor": parseFloat((data[0].IVATotal).toFixed(2)),
+                
+                }] : null,
+                "subTotal": parseFloat((data[0].DocTotal - data[0].IVATotal).toFixed(2)),
+                "ivaPerci1": 0,
+                "ivaRete1": 0,
+                "reteRenta": 0,
+                "montoTotalOperacion": parseFloat((data[0].DocTotal).toFixed(2)),
+                "totalNoGravado": 0,
+                "totalPagar": parseFloat((data[0].DocTotal).toFixed(2)),
+                "totalLetras": numberAsString(parseFloat((data[0].DocTotal).toFixed(2))),
+                "saldoFavor": 0.00,
+                "condicionOperacion": 2,
+                "pagos": [
+                    {
+                        "codigo": "05",
+                        "montoPago": parseFloat((data[0].DocTotal).toFixed(2)),
+                        "referencia": "Transferencia Bancaria",
+                        "plazo": "01",
+                        "periodo": 14
+                    }
+                ],
+                "numPagoElectronico": null
+            },
+            "extension": null,
             "apendice": null
         };
     } catch (error) {

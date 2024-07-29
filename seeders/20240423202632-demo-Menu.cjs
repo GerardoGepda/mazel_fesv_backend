@@ -14,21 +14,37 @@ module.exports = {
     */
     await queryInterface.bulkInsert('Menus', [
       {
-        name: 'Home',
+        name: 'Configuraciones',
         state: 1,
         order: 1,
-        icon: 'home',
+        icon: 'tune',
         createdAt: new Date(),
         updatedAt: new Date()
       },
       {
-        name: 'Configuraciones',
+        name: 'Clientes',
         state: 1,
         order: 2,
-        icon: 'tune',
+        icon: 'people',
         createdAt: new Date(),
         updatedAt: new Date()
-      }
+      },
+      {
+        name: 'Facturas y CCF',
+        state: 1,
+        order: 3,
+        icon: 'receipt_long',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        name: 'Sujetos Excluidos',
+        state: 1,
+        order: 4,
+        icon: 'article',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
     ], {});
   },
 

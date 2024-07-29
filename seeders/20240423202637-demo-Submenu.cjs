@@ -18,19 +18,10 @@ module.exports = {
         state: 1,
         order: 1,
         icon: 'menu',
-        menuId: 2,
+        menuId: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       },
-      {
-        name: 'App setting',
-        state: 1,
-        order: 2,
-        menuId: 2,
-        icon: 'settings',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
     ], {});
   },
 

@@ -3,7 +3,7 @@ import axios from "axios";
 import { getOdbcConnection } from "../../database/connectionOdbc.js";
 import { validationResult } from 'express-validator';
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR } from "../../utils/httpStatusCodes.js";
-import { dteFc } from "../../helpers/jsonBuilder.js";
+import { dteCcf, dteFc } from "../../helpers/jsonBuilder.js";
 import { dteSign, loginMHApi, sendEmail } from "../../helpers/feApis.js";
 import { incrementCorrelative } from "../../helpers/correlatives.js";
 import dayjs from "dayjs";
@@ -24,7 +24,7 @@ export const sendFceToMh = async (req, res) => {
             return res.status(BAD_REQUEST).json({ message: "Los datos enviados son incorrectos" });
         }
 
-        // to save resuñts
+        // to save results
         const mhResultError = [];
         const mhResultSuccess = [];
 
@@ -39,9 +39,17 @@ export const sendFceToMh = async (req, res) => {
         //creating the dtes json, and filtering the ones that are going to be sent
         for (const doc of fcDocs.filter((d) => documents.includes(d[0].PostOrder))) {
             //creating the dte json depending on the document type
-            const dte = await dteFc(doc, req.params.emissionDate);
+            let dte = null;
+            if (doc[0].TipoDocumento == "01") {
+                dte = await dteFc(doc, req.params.emissionDate);
+            } else if (doc[0].TipoDocumento == "03") {
+                dte = await dteCcf(doc, req.params.emissionDate);
+            } else {
+                throw "No se detectó el tipo de documento a transmitir."
+            }
+            
             const dteSigned = await dteSign(dte);
-            console.log(JSON.stringify(dte));
+
             // getting mh api token
             const token = await loginMHApi();
 
@@ -94,6 +102,7 @@ export const sendFceToMh = async (req, res) => {
                 dteJson: JSON.stringify(dte),
                 mhResponse: JSON.stringify(result.data),
                 state: 1,
+                referenceId: doc[0].PostOrder,
                 customerId: customer.id
             });
 
@@ -157,7 +166,6 @@ const fcCcfQuery = (initialDate, finalDate) => {
                 when JrnlHdr.SalesTaxCode = 'ExeFin' and JrnlHdr.CustomerInvoiceNo = '' then '0.00'
                 when JrnlHdr.SalesTaxCode = 'ExeCon' and JrnlHdr.CustomerInvoiceNo = ''then '0.00'
                 when JrnlHdr.SalesTaxCode = 'Export' and JrnlHdr.CustomerInvoiceNo = '' then '0.00'
-                when JrnlHdr.SalesTaxCode = '' and JrnlHdr.CustomerInvoiceNo = 'FSE' then '0.00'
             else
                 (JrnlRow.UnitCost * JrnlRow.Quantity) * 0.13 
             End as IVALinea,
@@ -165,7 +173,6 @@ const fcCcfQuery = (initialDate, finalDate) => {
                 when JrnlHdr.SalesTaxCode = 'ExeFin' and JrnlHdr.CustomerInvoiceNo = '' then '0.00'
                 when JrnlHdr.SalesTaxCode = 'ExeCon' and JrnlHdr.CustomerInvoiceNo = ''then '0.00'
                 when JrnlHdr.SalesTaxCode = 'Export' and JrnlHdr.CustomerInvoiceNo = '' then '0.00'
-                when JrnlHdr.SalesTaxCode = '' and JrnlHdr.CustomerInvoiceNo = 'FSE' then '0.00'
             else
                 JrnlHdr.MainAmount - ( JrnlHdr.MainAmount / 1.13)
             End as IVATotal,
@@ -193,6 +200,62 @@ const fcCcfQuery = (initialDate, finalDate) => {
     `;
 };
 
+const seQuery = (initialDate, finalDate) => {
+    return `
+        SELECT 
+            JrnlRow.PostOrder,
+            Vendors.VendorID as ProveedorId,
+            Vendors.VendorID as Dui_Nrc,
+            Vendors.CustomField0 as NIT,
+            Vendors.Name as Nombre,
+            Vendors.Email as Correo,
+            Vendors.PhoneNumber as Telefono,
+            Case when JrnlHdr.CustomerInvoiceNo = 'FSE' then '14' End as TipoDocumento,
+            Case 
+                when LineItem.ItemClass = '1' then '1'
+                when LineItem.ItemClass = '4' then '2'
+            Else 
+                '3'
+            End as TipoItem,
+            LineItem.ItemID,
+            LineItem.ItemDescription,
+            JrnlRow.Quantity as Cantidad,
+            '59' as UnidadMedida,
+            Case 
+                when LineItem.ItemID = 'ISR 10%' then 0.00 
+            Else 
+                JrnlRow.UnitCost 
+            End as PrecioUnitario,
+            Case 
+                when LineItem.ItemID = 'ISR 10%' then JrnlRow.Amount * -1 
+            Else 
+                0.00 
+            End as ReteRenta,
+            Case 
+                when JrnlHdr.MainAmount < 0 then JrnlHdr.MainAmount * -1 
+            Else 
+                JrnlHdr.MainAmount 
+            End as DocTotal
+        FROM   
+            {oj (((JrnlHdr JrnlHdr 
+        INNER JOIN 
+            JrnlRow JrnlRow ON JrnlHdr.PostOrder=JrnlRow.PostOrder) 
+        INNER JOIN 
+            Vendors Vendors ON JrnlRow.VendorRecordNumber=Vendors.VendorRecordNumber) 
+        LEFT OUTER JOIN 
+            LineItem LineItem ON JrnlRow.ItemRecordNumber=LineItem.ItemRecordNumber) 
+        INNER JOIN 
+            Address Address ON Vendors.VendorRecordNumber=Address.VendorRecordNumber}
+        WHERE  
+            JrnlHdr.CustomerInvoiceNo='FSE' 
+            AND JrnlRow.Journal = 4 
+            AND JrnlRow.RowNumber <> 0 
+            AND JrnlHdr.Reference not like '%V%'
+            AND JrnlHdr.TransactionDate >= '${initialDate}'
+            AND JrnlHdr.TransactionDate <= '${finalDate}'
+    `;
+}
+
 const getInvoicesOdbData = async (initialDate, finalDate) => {
     const connection = await getOdbcConnection();
     const fcDocs = await connection.query(fcCcfQuery(initialDate, finalDate));
@@ -218,5 +281,13 @@ const getInvoicesOdbData = async (initialDate, finalDate) => {
         }
     }
 
-    return dataMerged;
+    // filtering documents already sent to mh
+    const dataFiltered = [];
+    for (const doc of dataMerged) {
+        if (await db.Document.count({ where: { referenceId: doc[0].PostOrder } }) < 1) {
+            dataFiltered.push(doc);
+        }
+    }
+
+    return dataFiltered;
 };

@@ -17,8 +17,8 @@ export default {
                 errorMessage: 'La ruta debe ser una cadena de texto'
             },
             isLength: {
-                options: { min: 5 },
-                errorMessage: 'La ruta es obligatoria'
+                options: { min: 2 },
+                errorMessage: 'La ruta debe tener al menos 2 cáracteres'
             },
             trim: true // Sanitiza el campo
         },
