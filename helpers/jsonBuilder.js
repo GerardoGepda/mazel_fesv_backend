@@ -5,30 +5,41 @@ import numberAsString from './numberAsString.js';
 
 //function to get the emisor data
 const dteEmisor = async (tipoDocumento = "01") => {
+    const biller = await db.Biller.findOne({
+        include: [{ 
+            model: db.Municipality,
+            attributes: ['id', 'name', 'codeMH'],
+            include: { model: db.Department, attributes: ['id', 'name', 'codeMH'] }
+        }]
+    });
+    if (!biller) {
+        throw 'No se encontro información de facturador';
+    }
+    
     const emisor = {
-        "nit": "06142106121037",
-        "nrc": "2179189",
-        "descActividad": "Otros Servicio relacionados con la salud ncp",
-        "codActividad": "86909",
-        "nombre": "CENTRO INTEGRAL PSICOLOGICO SALVADOREÑO, S.A. DE C.V.",
+        "nit": biller.nit,
+        "nrc": biller.nrc,
+        "descActividad": biller.activity,
+        "codActividad": biller.activityCode,
+        "nombre": biller.name,
         "direccion": {
-            "departamento": "06",
-            "municipio": "14",
-            "complemento": "EJEMPLO DIRECCIÓN"
+            "departamento": biller.Municipality.Department.codeMH,
+            "municipio": biller.Municipality.codeMH,
+            "complemento": biller.address
         },
-        "telefono": "22222222",
-        "correo": "fesv@cipsa.com.sv",
+        "telefono": biller.phone,
+        "correo": biller.email,
     }
 
     if(!["14"].includes(tipoDocumento)){
-        emisor.nombreComercial = "CIPSA";
-        emisor.tipoEstablecimiento = "02";
+        emisor.nombreComercial = biller.comercialName;
+        emisor.tipoEstablecimiento = biller.establishmentType;
     }
 
     if (["01", "03", "14"].includes(tipoDocumento)) {
-        emisor.codEstableMH = "M001";
+        emisor.codEstableMH = biller.establishmentCode;
         emisor.codEstable = null;
-        emisor.codPuntoVentaMH = "P001";
+        emisor.codPuntoVentaMH = biller.posCode;
         emisor.codPuntoVenta = null;
     }
 
@@ -40,9 +51,9 @@ const dteEmisor = async (tipoDocumento = "01") => {
     }
 
     if (tipoDocumento == "anulacion") {
-        emisor.nomEstablecimiento = "CIPSA";
-        emisor.codEstable = "M001";
-        emisor.codPuntoVenta = "P001";
+        emisor.nomEstablecimiento = biller.comercialName;
+        emisor.codEstable = biller.establishmentCode;
+        emisor.codPuntoVenta = biller.posCode;
         delete emisor.descActividad;
         delete emisor.codActividad;
         delete emisor.direccion;
@@ -58,6 +69,10 @@ export const dteFc = async (data, emissionDate = '') => {
     try {
         // getting emisor data
         const emisor = await dteEmisor("01");
+        const biller = await db.Biller.findOne();
+        if (!biller) {
+            throw 'No se encontro información de facturador';
+        }
 
         let receptor = null;
         if (data[0].CustomerID !== 'CONSUMIDOR FINAL') {
@@ -139,7 +154,7 @@ export const dteFc = async (data, emissionDate = '') => {
                 "version": 1,
                 "ambiente": api.sandbox ? '00' : '01',
                 "tipoDte": "01",
-                "numeroControl": `DTE-01-M001P002-${(correlative.actual + 1).toString().padStart(15, '0')}`,
+                "numeroControl": `DTE-01-${biller.establishmentCode}${biller.posCode}-${(correlative.actual + 1).toString().padStart(15, '0')}`,
                 "codigoGeneracion": crypto.randomUUID().toUpperCase(),
                 // modelo previo
                 "tipoModelo": 1,
@@ -208,6 +223,10 @@ export const dteCcf = async (data, emissionDate = '') => {
     try {
         // getting emisor data
         const emisor = await dteEmisor("03");
+        const biller = await db.Biller.findOne();
+        if (!biller) {
+            throw 'No se encontro información de facturador';
+        }
 
         let receptor = null;
         if (data[0].CustomerID !== 'CONSUMIDOR FINAL') {
@@ -289,7 +308,7 @@ export const dteCcf = async (data, emissionDate = '') => {
                 "version": 3,
                 "ambiente": api.sandbox ? '00' : '01',
                 "tipoDte": "03",
-                "numeroControl": `DTE-03-M001P001-${(correlative.actual + 1).toString().padStart(15, '0')}`,
+                "numeroControl": `DTE-03-${biller.establishmentCode}${biller.posCode}-${(correlative.actual + 1).toString().padStart(15, '0')}`,
                 "codigoGeneracion": crypto.randomUUID().toUpperCase(),
                 "tipoModelo": 1,
                 "tipoOperacion": 1,

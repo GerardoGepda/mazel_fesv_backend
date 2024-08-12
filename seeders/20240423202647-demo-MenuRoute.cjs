@@ -40,7 +40,7 @@ module.exports = {
       {
         state: 1,
         menuId: 4, // SE
-        submenuId: 1,
+        submenuId: null,
         routeId: 4, // SE
         createdAt: new Date(),
         updatedAt: new Date()
