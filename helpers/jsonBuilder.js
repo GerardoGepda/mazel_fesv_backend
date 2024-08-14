@@ -107,7 +107,7 @@ export const dteFc = async (data, emissionDate = '') => {
                 },
                 "telefono": customer.phone || null,
                 "correo": customer.email
-            };   
+            };
         }
 
         const docBody = data.map((line, i) => {
@@ -118,7 +118,7 @@ export const dteFc = async (data, emissionDate = '') => {
                 "codigo": line.ItemID,
                 "codTributo": null,
                 "uniMedida": 59,
-                "descripcion": line.ItemDescription,
+                "descripcion": line.RowDescription,
                 "precioUni": parseFloat((line.PrecioUnitario * (parseFloat(line.IVALinea) ? 1.13 : 1)).toFixed(4)),
                 "montoDescu": 0, //preguntar
                 "ventaNoSuj": 0.00,
@@ -272,7 +272,7 @@ export const dteCcf = async (data, emissionDate = '') => {
                 "numeroDocumento": null,
                 "codigo": line.ItemID,
                 "codTributo": null,
-                "descripcion": line.ItemDescription,
+                "descripcion": line.RowDescription,
                 "cantidad": parseFloat((line.Quantity).toFixed(2)),
                 "uniMedida": 59,
                 "precioUni": parseFloat((line.PrecioUnitario).toFixed(4)),
@@ -362,6 +362,129 @@ export const dteCcf = async (data, emissionDate = '') => {
                 "numPagoElectronico": null
             },
             "extension": null,
+            "apendice": null
+        };
+    } catch (error) {
+        throw typeof error === "string" ? error : "Error al generar el JSON del documento.";
+    }
+}
+
+export const dteSe = async (data, emissionDate) => {
+    try {
+        // getting emisor data
+        const emisor = await dteEmisor("14");
+        const biller = await db.Biller.findOne();
+        if (!biller) {
+            throw 'No se encontro información de facturador';
+        }
+
+        let sujetoExcluido = null;
+        if (data[0].ProviderId !== 'CONSUMIDOR FINAL') {
+            // retriving customer info from db
+            const customer = await db.Customer.findOne({
+                include: [
+                    { model: db.DocumentType, attributes: ['id', 'name', 'codeMH'] },
+                    { 
+                        model: db.Municipality,
+                        include: { model: db.Department, attributes: ['id', 'name', 'codeMH'] }
+                    },
+                    { model: db.Activity, required: false }
+                ],
+                where: { oldId: data[0].ProviderId }
+            });
+
+            if (!customer) {
+                throw "No se encontró regsitro de cliente para el documento.";
+            }
+
+            sujetoExcluido = {
+                "tipoDocumento": customer.DocumentType.codeMH,
+                "numDocumento": customer.documentNumber.replace(/-/g, ''),
+                "nombre": customer.name,
+                "codActividad": customer.Activity ? customer.Activity.codeMH : null,
+                "descActividad": customer.Activity ? customer.Activity.name : null,
+                "direccion": {
+                    "departamento": customer.Municipality.Department.codeMH,
+                    "municipio": customer.Municipality.codeMH,
+                    "complemento": customer.address
+                },
+                "telefono": customer.phone || null,
+                "correo": customer.email
+            };   
+        }
+
+        const docBody = data.map((line, i) => {
+            return {
+                "numItem": i + 1,
+                "tipoItem": parseInt(line.TipoItem),
+                "codigo": line.ItemID || null,
+                "descripcion": line.RowDescription,
+                "cantidad": parseFloat((line.Quantity).toFixed(2)),
+                "uniMedida": parseInt(line.UnidadMedida || 99),
+                "precioUni": parseFloat((line.PrecioUnitario).toFixed(4)),
+                "compra": parseFloat((line.PrecioUnitario * line.Quantity).toFixed(4)),
+                "montoDescu": 0, //preguntar
+            }
+        });
+
+        //getting correlative
+        const correlative = await getCorrelativeForCodeMH("14");
+
+        if (!correlative) {
+            throw 'No se encontró registro de correaltivo (tipo: 14)';
+        }
+
+        if (correlative.final == correlative.actual) {
+            throw 'Se ha alcanzado el limite de correlativos';
+        }
+
+        const api = await db.ApiCredential.findOne({ where: { code: 'MH_FE_API' } }); // api info
+
+        if (!api) {
+            throw "No se encontró registro de api del MH para FE.";
+        }
+
+        return {
+            "identificacion": {
+                "version": 1,
+                "ambiente": api.sandbox ? '00' : '01',
+                "tipoDte": "14",
+                "numeroControl": `DTE-14-${biller.establishmentCode}${biller.posCode}-${(correlative.actual + 1).toString().padStart(15, '0')}`,
+                "codigoGeneracion": crypto.randomUUID().toUpperCase(),
+                // modelo previo
+                "tipoModelo": 1,
+                // 1:normal - 2:contingencia
+                "tipoOperacion": 1,
+                "tipoContingencia": null,
+                "motivoContin": null,
+                "fecEmi": emissionDate,
+                "horEmi": dayjs().format("HH:mm:ss"),
+                "tipoMoneda": "USD"
+            },
+            "emisor": emisor,
+            "sujetoExcluido": sujetoExcluido,
+            "cuerpoDocumento": docBody,
+            "resumen": {
+                "totalCompra": parseFloat((data[0].DocTotal + data[0].RentaRete).toFixed(2)),
+                "descu": 0,
+                "totalDescu": 0, // preguntar,
+                "subTotal": parseFloat((data[0].DocTotal + data[0].RentaRete).toFixed(2)),
+                "ivaRete1": 0,
+                "reteRenta": parseFloat((data[0].RentaRete).toFixed(2)),
+                "totalPagar": parseFloat((data[0].DocTotal).toFixed(2)),
+                "totalLetras": numberAsString(parseFloat((data[0].DocTotal).toFixed(2))),
+                "condicionOperacion": 1,
+                "pagos": [
+                    {
+                        "codigo": "05",
+                        "periodo": 15,
+                        "plazo": "01",
+                        "montoPago": parseFloat((data[0].DocTotal).toFixed(2)),
+                        "referencia": "Transferencia Bancaria"
+                    }
+                ],
+                "observaciones": null
+            },
             "apendice": null
         };
     } catch (error) {

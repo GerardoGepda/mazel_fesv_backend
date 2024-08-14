@@ -1,7 +1,6 @@
 import db from "../../models/index.cjs";
 import axios from "axios";
 import { getOdbcConnection } from "../../database/connectionOdbc.js";
-import { validationResult } from 'express-validator';
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR } from "../../utils/httpStatusCodes.js";
 import { dteCcf, dteFc } from "../../helpers/jsonBuilder.js";
 import { dteSign, loginMHApi, sendEmail } from "../../helpers/feApis.js";
@@ -47,7 +46,7 @@ export const sendFceToMh = async (req, res) => {
             } else {
                 throw "No se detectó el tipo de documento a transmitir."
             }
-            
+            console.log(JSON.stringify(dte, null, 2));
             const dteSigned = await dteSign(dte);
 
             // getting mh api token
@@ -129,6 +128,7 @@ const fcCcfQuery = (initialDate, finalDate) => {
     return `SELECT
             JrnlHdr.PostOrder,
             JrnlHdr.Reference,
+            JrnlHdr.transactionDate,
             Customers.CustomerID,
             Customers.CustomField1 as NIT,
             Case
@@ -157,9 +157,10 @@ const fcCcfQuery = (initialDate, finalDate) => {
             Case 
                 when LineItem.ItemClass = '1' then '1'
                 when LineItem.ItemClass = '4' then '2'
+                else '1'
             End as TipoItem,
             LineItem.ItemID,
-            LineItem.ItemDescription,
+            JrnlRow.RowDescription,
             JrnlRow.Quantity,
             JrnlRow.UnitCost as PrecioUnitario,
             Case
@@ -193,68 +194,13 @@ const fcCcfQuery = (initialDate, finalDate) => {
             JrnlRow.RowNumber >= 2
             and JrnlRow.RowType = 0
             and JrnlRow.Quantity <> 0
-            and JrnlHdr.SalesTaxCode IN ('IVAFin', 'ExeFin', 'ExeCon', 'IVACon', 'IVAGran')
-            and JrnlHdr.Reference not like '%V%'
+            and JrnlHdr.SalesTaxCode IN ('IVAFin', 'IVACon', 'IVAGran', 'ExeFin', 'ExeCon', 'Export')
+            and JrnlHdr.Reference not like '%V%' 
+            and JrnlHdr.Reference not like '%Q%'
             and JrnlHdr.TransactionDate >= '${initialDate}'
             and JrnlHdr.TransactionDate <= '${finalDate}'
     `;
 };
-
-const seQuery = (initialDate, finalDate) => {
-    return `
-        SELECT 
-            JrnlRow.PostOrder,
-            Vendors.VendorID as ProveedorId,
-            Vendors.VendorID as Dui_Nrc,
-            Vendors.CustomField0 as NIT,
-            Vendors.Name as Nombre,
-            Vendors.Email as Correo,
-            Vendors.PhoneNumber as Telefono,
-            Case when JrnlHdr.CustomerInvoiceNo = 'FSE' then '14' End as TipoDocumento,
-            Case 
-                when LineItem.ItemClass = '1' then '1'
-                when LineItem.ItemClass = '4' then '2'
-            Else 
-                '3'
-            End as TipoItem,
-            LineItem.ItemID,
-            LineItem.ItemDescription,
-            JrnlRow.Quantity as Cantidad,
-            '59' as UnidadMedida,
-            Case 
-                when LineItem.ItemID = 'ISR 10%' then 0.00 
-            Else 
-                JrnlRow.UnitCost 
-            End as PrecioUnitario,
-            Case 
-                when LineItem.ItemID = 'ISR 10%' then JrnlRow.Amount * -1 
-            Else 
-                0.00 
-            End as ReteRenta,
-            Case 
-                when JrnlHdr.MainAmount < 0 then JrnlHdr.MainAmount * -1 
-            Else 
-                JrnlHdr.MainAmount 
-            End as DocTotal
-        FROM   
-            {oj (((JrnlHdr JrnlHdr 
-        INNER JOIN 
-            JrnlRow JrnlRow ON JrnlHdr.PostOrder=JrnlRow.PostOrder) 
-        INNER JOIN 
-            Vendors Vendors ON JrnlRow.VendorRecordNumber=Vendors.VendorRecordNumber) 
-        LEFT OUTER JOIN 
-            LineItem LineItem ON JrnlRow.ItemRecordNumber=LineItem.ItemRecordNumber) 
-        INNER JOIN 
-            Address Address ON Vendors.VendorRecordNumber=Address.VendorRecordNumber}
-        WHERE  
-            JrnlHdr.CustomerInvoiceNo='FSE' 
-            AND JrnlRow.Journal = 4 
-            AND JrnlRow.RowNumber <> 0 
-            AND JrnlHdr.Reference not like '%V%'
-            AND JrnlHdr.TransactionDate >= '${initialDate}'
-            AND JrnlHdr.TransactionDate <= '${finalDate}'
-    `;
-}
 
 const getInvoicesOdbData = async (initialDate, finalDate) => {
     const connection = await getOdbcConnection();

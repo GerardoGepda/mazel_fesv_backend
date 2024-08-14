@@ -24,8 +24,11 @@ export const getCustomers = async (_, res) => {
 export const getCustomerOdbcByDocument = async (req, res) => {
     try {
         const connection = await getOdbcConnection();
-        const result = await connection.query(`SELECT CustomerID as id, Customer_Bill_Name as name, eMail_Address as email FROM customers WHERE CustomerID = '${req.params.id}'`);
-
+        let result = await connection.query(`SELECT CustomerID as id, Customer_Bill_Name as name, eMail_Address as email FROM customers WHERE CustomerID = '${req.params.id}'`);
+        if (!result[0]) {
+            result = await connection.query(`SELECT VendorID as id, Name as name, Email as email FROM Vendors WHERE VendorID = '${req.params.id}'`);
+        }
+        
         // Cierra la conexión
         await connection.close();
         return res.json({message: '¡Busqueda completada!', customer: result[0] || null});
