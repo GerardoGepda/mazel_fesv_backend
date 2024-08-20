@@ -12,6 +12,7 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
       models.Document.belongsTo(models.Customer, { foreignKey: 'customerId', targetKey: 'id' });
+      models.Document.belongsTo(models.User, { foreignKey: 'userId', targetKey: 'id' });
     }
   }
   Document.init({

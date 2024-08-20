@@ -94,7 +94,8 @@ export const sendSeToMh = async (req, res) => {
                 mhResponse: JSON.stringify(result.data),
                 state: 1,
                 referenceId: doc[0].PostOrder,
-                customerId: customer.id
+                customerId: customer.id,
+                userId: req.user.id
             });
 
             //saving the result of the transaction

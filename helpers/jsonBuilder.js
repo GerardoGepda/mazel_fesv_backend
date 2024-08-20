@@ -1,4 +1,4 @@
-import db from '../models/index.cjs'
+import db from '../models/index.cjs';
 import dayjs from 'dayjs';
 import { getCorrelativeForCodeMH } from './correlatives.js';
 import numberAsString from './numberAsString.js';
@@ -29,7 +29,7 @@ const dteEmisor = async (tipoDocumento = "01") => {
         },
         "telefono": biller.phone,
         "correo": biller.email,
-    }
+    };
 
     if(!["14"].includes(tipoDocumento)){
         emisor.nombreComercial = biller.comercialName;
@@ -62,7 +62,7 @@ const dteEmisor = async (tipoDocumento = "01") => {
     }
 
     return emisor;
-}
+};
 
 //function to create the dte FC json
 export const dteFc = async (data, emissionDate = '') => {
@@ -129,7 +129,7 @@ export const dteFc = async (data, emissionDate = '') => {
                 "psv": 0.00,
                 "noGravado": 0.00,
                 "numeroDocumento": null
-            }
+            };
         });
 
         //getting correlative
@@ -217,7 +217,7 @@ export const dteFc = async (data, emissionDate = '') => {
     } catch (error) {
         throw typeof error === "string" ? error : "Error al generar el JSON del documento.";
     }
-}
+};
 
 export const dteCcf = async (data, emissionDate = '') => {
     try {
@@ -283,7 +283,7 @@ export const dteCcf = async (data, emissionDate = '') => {
                 "tributos": parseFloat(line.IVALinea) > 0 ? ["20"] : null,
                 "psv": 0.00,
                 "noGravado": 0.00,
-            }
+            };
         });
 
         //getting correlative
@@ -367,7 +367,7 @@ export const dteCcf = async (data, emissionDate = '') => {
     } catch (error) {
         throw typeof error === "string" ? error : "Error al generar el JSON del documento.";
     }
-}
+};
 
 export const dteSe = async (data, emissionDate) => {
     try {
@@ -424,7 +424,7 @@ export const dteSe = async (data, emissionDate) => {
                 "precioUni": parseFloat((line.PrecioUnitario).toFixed(4)),
                 "compra": parseFloat((line.PrecioUnitario * line.Quantity).toFixed(4)),
                 "montoDescu": 0, //preguntar
-            }
+            };
         });
 
         //getting correlative
@@ -490,4 +490,79 @@ export const dteSe = async (data, emissionDate) => {
     } catch (error) {
         throw typeof error === "string" ? error : "Error al generar el JSON del documento.";
     }
-}
+};
+
+export const dteInvalidate = async (data) => {
+    try {
+        const document = await db.Document.findByPk(data.id, {
+            include: { 
+                model: db.Customer, 
+                required: false,
+                include: { model: db.DocumentType, attributes: ['id', 'name', 'codeMH'] }
+            }
+        });
+        if (!document) {
+            throw 'No se encontró el documento a anular.';
+        }
+        const emisor = await dteEmisor("anulacion");
+        const dteJson = JSON.parse(document.dteJson);
+
+        //creating customer object
+        const receptor = {
+            tipoDocumento: null,
+            numDocumento: null,
+            nombre: null,
+            telefono: null,
+            correo: null
+        };
+
+        if (document.Customer && document.Customer.oldId !== 'CONSUMIDOR FINAL') {
+            receptor.tipoDocumento = document.Customer.DocumentType.codeMH;
+            receptor.numDocumento = document.Customer.DocumentType.codeMH == '36' ? document.Customer.documentNumber.replace(/-/g, '') : document.Customer.documentNumber;
+            receptor.nombre = document.Customer.name;
+            receptor.telefono = document.Customer.phone || null;
+            receptor.correo = document.Customer.email;
+        }
+
+        //cambiar en el futuro
+
+        const api = await db.ApiCredential.findOne({ where: { code: 'MH_FE_API' } }); // api info
+
+        if (!api) {
+            throw "No se encontró registro de api del MH para FE.";
+        }
+
+        return {
+            "identificacion": {
+                "version": 2,
+                "ambiente": api.sandbox ? '00' : '01',
+                "codigoGeneracion": crypto.randomUUID().toUpperCase(),
+                "fecAnula": dayjs().format("YYYY-MM-DD"),
+                "horAnula": dayjs().format("HH:mm:ss"),
+            },
+            "emisor": emisor,
+            "documento": {
+                "tipoDte": document.dteType,
+                "codigoGeneracion": document.generationCode,
+                "selloRecibido": document.receivedStamp,
+                "numeroControl": document.controlNumber,
+                "fecEmi": document.dateEmitted,
+                "montoIva": document.dteType === '01' ? dteJson.resumen.totalIva : (document.dteType === '03' ? dteJson.resumen.tributos[0].valor : 0),
+                "codigoGeneracionR": null,
+                ...receptor
+            },
+            "motivo": {
+                "tipoAnulacion": 2,
+                "motivoAnulacion": null,
+                "nombreResponsable": "Gerente",
+                "tipDocResponsable": "37",
+                "numDocResponsable": "00001",
+                "nombreSolicita": data.applicantName,
+                "tipDocSolicita": data.documentType,
+                "numDocSolicita": data.documentNumber,
+            }
+        };
+    } catch (error) {
+        throw typeof error === "string" ? error : "Error al generar el JSON de invalidación.";
+    }
+};

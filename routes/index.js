@@ -13,6 +13,7 @@ import activityRoutes from '../v1/activities/routes.js';
 import customerRoutes from '../v1/customers/routes.js';
 import fceRoutes from '../v1/fce/routes.js';
 import seRoutes from '../v1/se/routes.js';
+import DocumentRoutes from '../v1/documents/routes.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = Router();
@@ -31,5 +32,6 @@ router.use('/activities', [authenticateToken], activityRoutes);
 router.use('/customers', [authenticateToken], customerRoutes);
 router.use('/fce', [authenticateToken], fceRoutes);
 router.use('/se', [authenticateToken], seRoutes);
+router.use('/documents', [authenticateToken], DocumentRoutes);
 
 export default router;

@@ -18,7 +18,7 @@ export const dteSign = async (dte) => {
             "activo": true,
             "passwordPri": api.password,
             "dteJson": dte
-        }
+        };
 
         const dataSigned = await axios.post(api.url.concat("/"), data, {
             headers: {
@@ -34,7 +34,7 @@ export const dteSign = async (dte) => {
     }
 
     return result;
-}
+};
 
 // function to get the token from mh api
 export const loginMHApi = async () => {
@@ -70,11 +70,11 @@ export const loginMHApi = async () => {
         await api.update({ token, tokenExpire: actualTime + (23.5 * 3600000), response: JSON.stringify(result.data) });
     } catch (error) {
         console.log(error);
-        throw typeof error == "string" ? error : "Error al iniciar sesión en el API de MH."
+        throw typeof error == "string" ? error : "Error al iniciar sesión en el API de MH.";
     }
 
     return token;
-}
+};
 
 //function to send email
 export const sendEmail = async (dte) => {
@@ -89,7 +89,7 @@ export const sendEmail = async (dte) => {
     const data = {
         typeDocument: parseInt(dte.identificacion.tipoDte),
         dte
-    }
+    };
 
     const response = await axios.post(`${process.env.MH_FE_EMAIL_API_URL}/send-email`, data, options);
     return response.data;

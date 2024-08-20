@@ -13,6 +13,7 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
       models.User.belongsTo(models.Role, { foreignKey: 'roleId', targetKey: 'id' });
       models.User.hasMany(models.ResetPassword, {foreignKey: 'userId', sourceKey: 'id'});
+      models.User.hasMany(models.Document, {foreignKey: 'userId', sourceKey: 'id'});
     }
   }
   User.init({

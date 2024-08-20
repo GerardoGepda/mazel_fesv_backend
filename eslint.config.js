@@ -4,6 +4,7 @@ export default [
       globals: {
         console: "readonly",
         setTimeout: "readonly",
+        crypto: "readonly",
         process: "readonly",
         __filename: "readonly",
         __dirname: "readonly",
