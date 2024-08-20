@@ -174,7 +174,7 @@ const seQuery = (initialDate, finalDate) => {
             AND JrnlHdr.TransactionDate >= '${initialDate}'
             AND JrnlHdr.TransactionDate <= '${finalDate}'
     `;
-}
+};
 
 const getSeOdbData = async (initialDate, finalDate) => {
     const connection = await getOdbcConnection();
@@ -183,7 +183,7 @@ const getSeOdbData = async (initialDate, finalDate) => {
     await connection.close();
 
     if (seDocs.length == 0) {
-        return []
+        return [];
     }
 
     // getting info about customers in data base
@@ -202,10 +202,10 @@ const getSeOdbData = async (initialDate, finalDate) => {
     }
 
     // now, cleaning rows with ISR id an adding as a field
-    const dataCleaned = []
+    const dataCleaned = [];
     for (const doc of dataMerged) {
         const renta = doc.find(line => (line.ItemID || '').includes('ISR'))?.RentaRete || 0;
-        dataCleaned.push(doc.filter(line => !(line.ItemID || '').includes('ISR')).map(line => ({...line, RentaRete: renta})))
+        dataCleaned.push(doc.filter(line => !(line.ItemID || '').includes('ISR')).map(line => ({...line, RentaRete: renta})));
     }
 
     // filtering documents already sent to mh

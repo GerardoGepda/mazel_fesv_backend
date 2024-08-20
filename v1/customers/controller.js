@@ -100,7 +100,7 @@ export const updateCustomer = async (req, res) => {
         console.log(error);
         res.status(INTERNAL_SERVER_ERROR).json({ message: "Error al actualizar el cliente (500)" });
     }
-}
+};
 
 export const deleteCustomer = async (req, res) => {
     try {
@@ -121,4 +121,4 @@ export const deleteCustomer = async (req, res) => {
         console.log(error);
         res.status(INTERNAL_SERVER_ERROR).json({ message: "Error al eliminar el cliente (500)" });
     }
-}
+};

@@ -9,4 +9,4 @@ export const getActivitiesActive = async (_, res) => {
         console.log(error);
         res.status(INTERNAL_SERVER_ERROR).json({ message: "Error al obtener las actividades" });
     }
-}
+};

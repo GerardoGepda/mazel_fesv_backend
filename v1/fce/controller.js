@@ -44,7 +44,7 @@ export const sendFceToMh = async (req, res) => {
             } else if (doc[0].TipoDocumento == "03") {
                 dte = await dteCcf(doc, req.params.emissionDate);
             } else {
-                throw "No se detectó el tipo de documento a transmitir."
+                throw "No se detectó el tipo de documento a transmitir.";
             }
             console.log(JSON.stringify(dte, null, 2));
             const dteSigned = await dteSign(dte);
@@ -209,7 +209,7 @@ const getInvoicesOdbData = async (initialDate, finalDate) => {
     await connection.close();
 
     if (fcDocs.length == 0) {
-        return []
+        return [];
     }
 
     // getting info about customers in data base

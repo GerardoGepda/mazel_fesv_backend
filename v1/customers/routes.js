@@ -6,7 +6,7 @@ import { checkSchema } from 'express-validator';
 const router = Router();
 
 router.get('/', getCustomers);
-router.get('/odbc/:id', getCustomerOdbcByDocument)
+router.get('/odbc/:id', getCustomerOdbcByDocument);
 router.post('/', checkSchema(schema.create), createCustomer);
 router.put('/:id', checkSchema(schema.update), updateCustomer);
 router.delete('/:id', checkSchema(schema.delete), deleteCustomer);
