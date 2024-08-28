@@ -39,14 +39,20 @@ export const sendFceToMh = async (req, res) => {
         for (const doc of fcDocs.filter((d) => documents.includes(d[0].PostOrder))) {
             //creating the dte json depending on the document type
             let dte = null;
+            let totalIva = 0;
             if (doc[0].TipoDocumento == "01") {
                 dte = await dteFc(doc, req.params.emissionDate);
+                totalIva = dte.resumen.totalIva;
             } else if (doc[0].TipoDocumento == "03") {
                 dte = await dteCcf(doc, req.params.emissionDate);
+                // getting total iva from ccf
+                if (Array.isArray(dte.resumen.tributos)) {
+                    totalIva = dte.resumen.tributos.find(t => t.codigo == "20").valor || 0;
+                }
             } else {
                 throw "No se detectó el tipo de documento a transmitir.";
             }
-            console.log(JSON.stringify(dte, null, 2));
+
             const dteSigned = await dteSign(dte);
 
             // getting mh api token
@@ -96,6 +102,7 @@ export const sendFceToMh = async (req, res) => {
                 controlNumber: dte.identificacion.numeroControl,
                 receivedStamp: result.data.selloRecibido,
                 dteType: dte.identificacion.tipoDte,
+                totalIva: totalIva,
                 dateEmitted: dte.identificacion.fecEmi,
                 dateProcessed: dayjs().format("YYYY-MM-DD"),
                 dteJson: JSON.stringify(dte),

@@ -21,6 +21,17 @@ export const schema = {
       },
       trim: true // Sanitiza el campo
     },
+    dui: {
+      in: ['body'],
+      isString: {
+        errorMessage: 'El DUI debe ser una cadena de texto'
+      },
+      isLength: {
+        options: { min: 10, max: 10 },
+        errorMessage: 'El DUI es obligatorio'
+      },
+      trim: true
+    },
     email: {
       in: ['body'],
       isEmail: {

@@ -78,19 +78,24 @@ export const loginMHApi = async () => {
 
 //function to send email
 export const sendEmail = async (dte) => {
-    const options = {
-        headers: {
-            "content-type": "application/json",
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST',
-        }
-    };
-
-    const data = {
-        typeDocument: parseInt(dte.identificacion.tipoDte),
-        dte
-    };
-
-    const response = await axios.post(`${process.env.MH_FE_EMAIL_API_URL}/send-email`, data, options);
-    return response.data;
+    try {
+        const options = {
+            headers: {
+                "content-type": "application/json",
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST',
+            }
+        };
+    
+        const data = {
+            typeDocument: parseInt(dte.identificacion.tipoDte),
+            dte
+        };
+    
+        const response = await axios.post(`${process.env.MH_FE_EMAIL_API_URL}/send-email`, data, options);
+        return response.data;
+    } catch (error) {
+        console.log(error);
+        throw typeof error === 'string' ? error : 'Error al enviar el correo.';
+    }
 };

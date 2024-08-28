@@ -88,6 +88,7 @@ export const sendSeToMh = async (req, res) => {
                 controlNumber: dte.identificacion.numeroControl,
                 receivedStamp: result.data.selloRecibido,
                 dteType: dte.identificacion.tipoDte,
+                totalIva: 0,
                 dateEmitted: dte.identificacion.fecEmi,
                 dateProcessed: dayjs().format("YYYY-MM-DD"),
                 dteJson: JSON.stringify(dte),

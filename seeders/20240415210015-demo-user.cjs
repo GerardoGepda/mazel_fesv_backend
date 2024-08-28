@@ -19,6 +19,7 @@ module.exports = {
       {
         firstName: 'Admin',
         lastName: 'User',
+        dui: '00000000-0',
         email: 'admin@example',
         password: bycrypt.hashSync('123456', 12),
         state: 1,
@@ -29,6 +30,7 @@ module.exports = {
       {
         firstName: 'John',
         lastName: 'Doe',
+        dui: '00000000-1',
         email: 'johndoe@example',
         password: bycrypt.hashSync('123456', 12),
         state: 1,
@@ -39,6 +41,7 @@ module.exports = {
       {
         firstName: 'Jane',
         lastName: 'Doe',
+        dui: '00000000-2',
         email: 'janedoe@example',
         password: bycrypt.hashSync('123456', 12),
         state: 1,
@@ -49,6 +52,7 @@ module.exports = {
       {
         firstName: 'Prueba',
         lastName: 'Cipsa',
+        dui: '00000000-3',
         email: 'prueba@cipsa.com.sv',
         password: bycrypt.hashSync('123456', 12),
         state: 1,

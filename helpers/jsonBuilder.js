@@ -74,7 +74,17 @@ export const dteFc = async (data, emissionDate = '') => {
             throw 'No se encontro información de facturador';
         }
 
-        let receptor = null;
+        let receptor = {
+            "tipoDocumento": null,
+            "numDocumento": null,
+            "nrc": null,
+            "nombre": "CONSUMIDOR FINAL",
+            "codActividad": null,
+            "descActividad": null,
+            "direccion": null,
+            "telefono": null,
+            "correo": null
+        };
         if (data[0].CustomerID !== 'CONSUMIDOR FINAL') {
             // retriving customer info from db
             const customer = await db.Customer.findOne({
@@ -492,20 +502,34 @@ export const dteSe = async (data, emissionDate) => {
     }
 };
 
-export const dteInvalidate = async (data) => {
+export const dteInvalidate = async (data, userId) => {
     try {
+        // getting document to invalidate
         const document = await db.Document.findByPk(data.id, {
+            attributes: {
+                include: [
+                    [db.sequelize.fn('FORMAT', db.sequelize.col('dateEmitted'), 'yyyy-MM-d'), 'dateEmitted'],
+                    [db.sequelize.fn('FORMAT', db.sequelize.col('dateProcessed'), 'yyyy-MM-d'), 'dateProcessed']
+                ]
+            },
             include: { 
                 model: db.Customer, 
-                required: false,
+                required: true,
                 include: { model: db.DocumentType, attributes: ['id', 'name', 'codeMH'] }
             }
         });
+
+        // validating document
         if (!document) {
             throw 'No se encontró el documento a anular.';
+        } else if (document.state === 0) {
+            throw 'El documento ya ha sido invalidado.';
         }
+
         const emisor = await dteEmisor("anulacion");
-        const dteJson = JSON.parse(document.dteJson);
+
+        //geting data of responsible in user table
+        const responsible = await db.User.findByPk(userId, { attributes: ['firstName', 'lastName', 'dui'] });
 
         //creating customer object
         const receptor = {
@@ -524,14 +548,14 @@ export const dteInvalidate = async (data) => {
             receptor.correo = document.Customer.email;
         }
 
-        //cambiar en el futuro
-
+        // consulting api info
         const api = await db.ApiCredential.findOne({ where: { code: 'MH_FE_API' } }); // api info
 
         if (!api) {
             throw "No se encontró registro de api del MH para FE.";
         }
 
+        // creating dte object
         return {
             "identificacion": {
                 "version": 2,
@@ -547,16 +571,16 @@ export const dteInvalidate = async (data) => {
                 "selloRecibido": document.receivedStamp,
                 "numeroControl": document.controlNumber,
                 "fecEmi": document.dateEmitted,
-                "montoIva": document.dteType === '01' ? dteJson.resumen.totalIva : (document.dteType === '03' ? dteJson.resumen.tributos[0].valor : 0),
+                "montoIva": document.totalIva,
                 "codigoGeneracionR": null,
                 ...receptor
             },
             "motivo": {
                 "tipoAnulacion": 2,
                 "motivoAnulacion": null,
-                "nombreResponsable": "Gerente",
-                "tipDocResponsable": "37",
-                "numDocResponsable": "00001",
+                "nombreResponsable": responsible.firstName + ' ' + responsible.lastName,
+                "tipDocResponsable": "13",
+                "numDocResponsable": responsible.dui,
                 "nombreSolicita": data.applicantName,
                 "tipDocSolicita": data.documentType,
                 "numDocSolicita": data.documentNumber,

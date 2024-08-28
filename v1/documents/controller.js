@@ -2,8 +2,9 @@ import db from "../../models/index.cjs";
 import { Op } from "sequelize";
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR } from "../../utils/httpStatusCodes.js";
 import { dteInvalidate } from "../../helpers/jsonBuilder.js";
-import { dteSign, loginMHApi } from "../../helpers/feApis.js";
+import { dteSign, loginMHApi, sendEmail } from "../../helpers/feApis.js";
 import axios from "axios";
+import dayjs from "dayjs";
 
 export const getDocumentsByRangeDate = async (req, res) => {
     try {
@@ -25,6 +26,12 @@ export const getDocumentsByRangeDate = async (req, res) => {
         }
 
         const documents = await db.Document.findAll({
+            attributes: {
+                include: [
+                    [db.sequelize.fn('FORMAT', db.sequelize.col('dateEmitted'), 'yyyy-MM-d'), 'dateEmitted'],
+                    [db.sequelize.fn('FORMAT', db.sequelize.col('dateProcessed'), 'yyyy-MM-d'), 'dateProcessed']
+                ]
+            },
             where: {
                 dateEmitted: { [Op.between]: [initialDate, finalDate] }
             }
@@ -43,7 +50,7 @@ export const invalidateDocument = async (req, res) => {
             return res.status(BAD_REQUEST).json({ message: 'El nombre del solicitante, tipo y número de documento son requeridos.' });
         }
 
-        const dte = await dteInvalidate(req.body);
+        const dte = await dteInvalidate(req.body, req.user.id);
         const dteSigned = await dteSign(dte);
 
         // getting mh api token
@@ -65,6 +72,9 @@ export const invalidateDocument = async (req, res) => {
                 }
             });
             console.log("OKA", result.data);
+            if (result?.data?.estado != "PROCESADO") {
+                throw result?.data?.descripcionMsg || "Error al invalidar el documento.";
+            }
         } catch (error) {
             console.log("NO OKA", error?.response?.data);
             if (error.hasOwnProperty('response'))
@@ -73,12 +83,46 @@ export const invalidateDocument = async (req, res) => {
                 return res.status(INTERNAL_SERVER_ERROR).json({ message: "Error desconocido al invalidar." });
         }
 
-        // update document state
-        await db.Document.update({ state: 0 }, { where: { id: req.body.id } });
+        // update document data
+        await db.Document.update({
+            state: 0,
+            generationCodeInvl: result.data.codigoGeneracion,
+            receivedStampInvl: result.data.selloRecibido,
+            invalidationDate: dayjs().format('YYYY-MM-DD'),
+            invalidationResponse: JSON.stringify(result.data)
+        }, { where: { id: req.body.id } });
 
         return res.status(200).json({ message: 'Documento invalidado correctamente.', result: result.data });
     } catch (error) {
         console.log(error);
         return res.status(INTERNAL_SERVER_ERROR).json({ message: typeof error === 'string' ? error : 'Error al invalidar el documento.' });
+    }
+};
+
+export const forwardEmail = async (req, res) => {
+    try {
+        if (!req.params.id) {
+            throw 'El id del documento es requerido.';
+        }
+
+        const document = await db.Document.findByPk(req.params.id, {
+            attributes: ['id', 'receivedStamp', 'dteJson'],
+            include: [{ model: db.Customer, attributes: ['email'] }]
+        });
+        const dte = JSON.parse(document.dteJson);
+        dte.identificacion.selloRecibido = document.receivedStamp;
+        if (dte.receptor) {
+            dte.receptor.correo = document.Customer.email;
+        }
+
+        if (dte.sujetoExcluido) {
+            dte.sujetoExcluido.correo = document.Customer.email;
+        }
+
+        await sendEmail(dte);
+        return res.status(200).json({ message: 'Correo reenviado correctamente.' });
+    } catch (error) {
+        console.log(error);
+        return res.status(INTERNAL_SERVER_ERROR).json({ message: typeof error === 'string' ? error : 'Error al reenviar el correo.' });
     }
 };
