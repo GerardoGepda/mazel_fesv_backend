@@ -1,0 +1,16 @@
+{
+  "apps": [
+    {
+      "name": "fesv-api",
+      "script": "./app.js",
+      "env": {
+        "PORT": "PORT",
+        "NODE_ENV": "production|development|test",
+        "JWT_SECRET": "secret_word",
+        "SQLZ_DIALECT": "mssql|mysql|postgres",
+        "ODBC_CONNECTION": "DSN=dsn_name;UID=user;PWD=password",
+        "MH_FE_EMAIL_API_URL": "http://IP:PORT"
+      }
+    }
+  ]
+}
