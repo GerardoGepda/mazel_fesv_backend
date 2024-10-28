@@ -2,7 +2,7 @@ import db from "../../models/index.cjs";
 import { Op } from "sequelize";
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR } from "../../utils/httpStatusCodes.js";
 import { dteInvalidate } from "../../helpers/jsonBuilder.js";
-import { dteSign, loginMHApi, sendEmail } from "../../helpers/feApis.js";
+import { dteSign, generatePdf, loginMHApi, sendEmail } from "../../helpers/feApis.js";
 import axios from "axios";
 import dayjs from "dayjs";
 
@@ -124,5 +124,38 @@ export const forwardEmail = async (req, res) => {
     } catch (error) {
         console.log(error);
         return res.status(INTERNAL_SERVER_ERROR).json({ message: typeof error === 'string' ? error : 'Error al reenviar el correo.' });
+    }
+};
+
+export const getPdf = async (req, res) => {
+    try {
+        if (!req.params.id) {
+            throw 'El id del documento es requerido.';
+        }
+
+        const document = await db.Document.findByPk(req.params.id, {
+            attributes: ['id', 'generationCode', 'dteJson'],
+        });
+        const dte = JSON.parse(document.dteJson);
+        // dte.identificacion.selloRecibido = document.receivedStamp;
+
+        // stream the pdf
+        const pdf = await generatePdf(dte);
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${document.generationCode}.pdf""`);
+        
+        // Transmitir el stream del PDF directamente al cliente
+        pdf.pipe(res);
+
+        // Manejo de errores durante la transmisión
+        pdf.on('error', (err) => {
+            console.error('Error durante la transmisión del PDF:', err);
+            res.status(500).send('Error al transmitir el PDF.');
+        });
+
+    } catch (error) {
+        console.log(error);
+        return res.status(INTERNAL_SERVER_ERROR).json({ message: typeof error === 'string' ? error : 'Error al generar el PDF.' });
     }
 };

@@ -10,7 +10,7 @@ import dayjs from "dayjs";
 export const getSeDocsOdbcByDateRange = async (req, res) => {
     try {
         const seDocs = await getSeOdbData(req.params.initialDate, req.params.finalDate);
-        return res.json({ message: '¡Busqueda completada!', seDocs: seDocs.map(docs => docs[0]) || null });
+        return res.json({ message: '¡Busqueda completada!', seDocs: seDocs.map(docs => ({ ...docs[0], items: docs })) || null });
     } catch (error) {
         console.log(error);
         return res.status(INTERNAL_SERVER_ERROR).json({ message: "Error interno del servidor" });

@@ -86,17 +86,7 @@ const validations = {
                 options: { min: 1 },
                 errorMessage: 'El valor del tipo de documento debe ser valido'
             }
-        },
-        municipalityId: {
-            in: ['body'],
-            exists: {
-                errorMessage: 'El municipio es obligatorio'
-            },
-            isInt: {
-                options: { min: 1 },
-                errorMessage: 'El valor del municipio debe ser valido'
-            }
-        },
+        }
     },
     params: {
         id: {

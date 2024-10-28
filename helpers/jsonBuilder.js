@@ -110,11 +110,11 @@ export const dteFc = async (data, emissionDate = '') => {
                 "nombre": customer.name,
                 "codActividad": customer.Activity ? customer.Activity.codeMH : null,
                 "descActividad": customer.Activity ? customer.Activity.name : null,
-                "direccion": {
+                "direccion": customer.Municipality ? {
                     "departamento": customer.Municipality.Department.codeMH,
                     "municipio": customer.Municipality.codeMH,
-                    "complemento": customer.address
-                },
+                    "complemento": customer.address || ''
+                } : null,
                 "telefono": customer.phone || null,
                 "correo": customer.email
             };

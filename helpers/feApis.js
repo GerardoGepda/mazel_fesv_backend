@@ -76,7 +76,7 @@ export const loginMHApi = async () => {
     return token;
 };
 
-//function to send email
+// function to send email
 export const sendEmail = async (dte) => {
     try {
         const options = {
@@ -97,5 +97,25 @@ export const sendEmail = async (dte) => {
     } catch (error) {
         console.log(error);
         throw typeof error === 'string' ? error : 'Error al enviar el correo.';
+    }
+};
+
+// function to generate the pdf from email api
+export const generatePdf = async (dte) => {
+    try {
+        const options = {
+            responseType: 'stream',
+        };
+    
+        const data = {
+            typeDocument: parseInt(dte.identificacion.tipoDte),
+            dte
+        };
+    
+        const response = await axios.post(`${process.env.MH_FE_EMAIL_API_URL}/create-pdf`, data, options);
+        return response.data;
+    } catch (error) {
+        console.log(error);
+        throw typeof error === 'string' ? error : 'Error al obtener el PDF.';
     }
 };
