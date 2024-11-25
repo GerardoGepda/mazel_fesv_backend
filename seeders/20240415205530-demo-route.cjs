@@ -21,6 +21,13 @@ module.exports = {
         updatedAt: new Date()
       },
       {
+        name: 'Documentos',
+        path: 'documents',
+        state: 1,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
         name: 'Clientes',
         path: 'customers',
         state: 1,

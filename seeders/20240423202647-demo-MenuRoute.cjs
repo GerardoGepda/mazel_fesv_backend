@@ -23,25 +23,33 @@ module.exports = {
       },
       {
         state: 1,
-        menuId: 2, // Clientes
+        menuId: 2, // Documents
         submenuId: null,
-        routeId: 2, // Clientes
+        routeId: 2, // Documents
         createdAt: new Date(),
         updatedAt: new Date()
       },
       {
         state: 1,
-        menuId: 3, // FC, CCF
+        menuId: 3, // Clientes
         submenuId: null,
-        routeId: 3, // FC, CCF
+        routeId: 3, // Clientes
         createdAt: new Date(),
         updatedAt: new Date()
       },
       {
         state: 1,
-        menuId: 4, // SE
+        menuId: 4, // FC, CCF
         submenuId: null,
-        routeId: 4, // SE
+        routeId: 4, // FC, CCF
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        state: 1,
+        menuId: 5, // SE
+        submenuId: null,
+        routeId: 5, // SE
         createdAt: new Date(),
         updatedAt: new Date()
       },

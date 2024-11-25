@@ -106,7 +106,7 @@ export const forwardEmail = async (req, res) => {
         }
 
         const document = await db.Document.findByPk(req.params.id, {
-            attributes: ['id', 'receivedStamp', 'dteJson'],
+            attributes: ['id', 'receivedStamp', 'dteJson', 'timesSent'],
             include: [{ model: db.Customer, attributes: ['email'] }]
         });
         const dte = JSON.parse(document.dteJson);
@@ -120,6 +120,9 @@ export const forwardEmail = async (req, res) => {
         }
 
         await sendEmail(dte);
+
+        // update times sent
+        await db.Document.update({ timesSent: parseInt(document.timesSent || 0) + 1 }, { where: { id: document.id } });
         return res.status(200).json({ message: 'Correo reenviado correctamente.' });
     } catch (error) {
         console.log(error);

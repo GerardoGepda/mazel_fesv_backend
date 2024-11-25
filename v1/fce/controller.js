@@ -108,6 +108,7 @@ export const sendFceToMh = async (req, res) => {
                 dteJson: JSON.stringify(dte),
                 mhResponse: JSON.stringify(result.data),
                 state: 1,
+                timesSent: 1,
                 referenceId: doc[0].PostOrder,
                 customerId: customer.id,
                 userId: req.user.id

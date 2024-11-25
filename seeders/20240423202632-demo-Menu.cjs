@@ -22,9 +22,17 @@ module.exports = {
         updatedAt: new Date()
       },
       {
-        name: 'Clientes',
+        name: 'Documentos',
         state: 1,
         order: 2,
+        icon: 'description',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        name: 'Clientes',
+        state: 1,
+        order: 3,
         icon: 'people',
         createdAt: new Date(),
         updatedAt: new Date()
@@ -32,7 +40,7 @@ module.exports = {
       {
         name: 'Facturas y CCF',
         state: 1,
-        order: 3,
+        order: 4,
         icon: 'receipt_long',
         createdAt: new Date(),
         updatedAt: new Date()
@@ -40,7 +48,7 @@ module.exports = {
       {
         name: 'Sujetos Excluidos',
         state: 1,
-        order: 4,
+        order: 5,
         icon: 'article',
         createdAt: new Date(),
         updatedAt: new Date()
