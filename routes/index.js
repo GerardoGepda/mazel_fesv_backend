@@ -14,24 +14,23 @@ import customerRoutes from '../v1/customers/routes.js';
 import fceRoutes from '../v1/fce/routes.js';
 import seRoutes from '../v1/se/routes.js';
 import DocumentRoutes from '../v1/documents/routes.js';
-import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = Router();
 
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
-router.use('/roles', [authenticateToken], roleRoutes);
-router.use('/routes', [authenticateToken], routeRoutes);
-router.use('/permissions', [authenticateToken], permissionRoutes);
-router.use('/menus', [authenticateToken], menuRoutes);
-router.use('/submenus', [authenticateToken], submenuRoutes);
-router.use('/document_types', [authenticateToken], documenTypeRoutes);
-router.use('/departments', [authenticateToken], departmentRoutes);
-router.use('/municipalities', [authenticateToken], municipalityRoutes);
-router.use('/activities', [authenticateToken], activityRoutes);
-router.use('/customers', [authenticateToken], customerRoutes);
-router.use('/fce', [authenticateToken], fceRoutes);
-router.use('/se', [authenticateToken], seRoutes);
-router.use('/documents', [authenticateToken], DocumentRoutes);
+router.use('/roles', roleRoutes);
+router.use('/routes', routeRoutes);
+router.use('/permissions', permissionRoutes);
+router.use('/menus', menuRoutes);
+router.use('/submenus', submenuRoutes);
+router.use('/document_types', documenTypeRoutes);
+router.use('/departments', departmentRoutes);
+router.use('/municipalities', municipalityRoutes);
+router.use('/activities', activityRoutes);
+router.use('/customers', customerRoutes);
+router.use('/fce', fceRoutes);
+router.use('/se', seRoutes);
+router.use('/documents', DocumentRoutes);
 
 export default router;

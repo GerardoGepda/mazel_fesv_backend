@@ -5,6 +5,7 @@ import { dteInvalidate } from "../../helpers/jsonBuilder.js";
 import { dteSign, generatePdf, loginMHApi, sendEmail } from "../../helpers/feApis.js";
 import axios from "axios";
 import dayjs from "dayjs";
+import { executeHanaSelectQuery } from "../../database/connectionHana.js";
 
 export const getDocumentsByRangeDate = async (req, res) => {
     try {
@@ -38,6 +39,57 @@ export const getDocumentsByRangeDate = async (req, res) => {
         });
 
         return res.status(200).json(documents);
+    } catch (error) {
+        console.log(error);
+        return res.status(INTERNAL_SERVER_ERROR).json({ message: typeof error === 'string' ? error : 'Error al consultar documentos electrónicos.' });
+    }
+};
+
+export const getHanaDocumentsByRangeDate = async (req, res) => {
+    try {
+        const { initialDate, finalDate } = req.params;
+
+        if (!initialDate || !finalDate) {
+            return res.status(BAD_REQUEST).json({ message: 'Fechas de inicio y fin son requeridas.' });
+        }
+
+        // validate dates format
+        const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+        if (!datePattern.test(initialDate) || !datePattern.test(finalDate)) {
+            return res.status(BAD_REQUEST).json({ message: 'Formato de fecha inválido.' });
+        }
+
+        // validate initial date is less than final date
+        if (initialDate > finalDate) {
+            return res.status(BAD_REQUEST).json({ message: 'La fecha de inicio debe ser menor a la fecha fin.' });
+        }
+
+        // getting data from hana connection
+        const result = await executeHanaSelectQuery(`SELECT * FROM "PRUEBAS_MAZEL"."B1View_FeJson" WHERE "Fecha" >= '${initialDate}' AND "Fecha" <= '${finalDate}' ORDER BY "DocNum" ASC`);
+
+        // append Json.parse value of the "Json" property of each row
+        for (let i = 0; i < result.length; i++) {
+            let tempJson = null;
+            try {
+                tempJson = JSON.parse(result[i].Json || '{}');    
+            } catch (error) {
+                tempJson = null;
+            }
+            const document = await db.Document.findOne({ where: { generationCode: tempJson?.identificacion?.codigoGeneracion || '' } });
+
+            if (document) {
+                result[i].timesSent = document.timesSent;
+            } else {
+                result[i].timesSent = 0;
+            }
+
+            result[i].detail = tempJson?.identificacion || null;
+            if (result[i].detail) {
+                result[i].detail.selloRecibido = tempJson?.selloRecibido || null;
+            }
+        }
+
+        return res.status(200).json(result);
     } catch (error) {
         console.log(error);
         return res.status(INTERNAL_SERVER_ERROR).json({ message: typeof error === 'string' ? error : 'Error al consultar documentos electrónicos.' });
@@ -100,30 +152,52 @@ export const invalidateDocument = async (req, res) => {
 };
 
 export const forwardEmail = async (req, res) => {
+    let countSent = 0;
     try {
         if (!req.params.id) {
             throw 'El id del documento es requerido.';
         }
 
-        const document = await db.Document.findByPk(req.params.id, {
-            attributes: ['id', 'receivedStamp', 'dteJson', 'timesSent'],
-            include: [{ model: db.Customer, attributes: ['email'] }]
-        });
-        const dte = JSON.parse(document.dteJson);
-        dte.identificacion.selloRecibido = document.receivedStamp;
-        if (dte.receptor) {
-            dte.receptor.correo = document.Customer.email;
+        const result = await executeHanaSelectQuery(`SELECT "Json", "Correo" FROM "PRUEBAS_MAZEL"."B1View_FeJson" WHERE "DocNum" = '${req.params.id}'`);
+
+        if (result.length === 0) {
+            throw 'Documento no encontrado.';
+        }
+        const dte = JSON.parse(result[0].Json);
+        if (!dte?.identificacion?.numeroControl) {
+            throw 'Documento no cumple el esquema.';
+        }
+        dte.identificacion.selloRecibido = dte.selloRecibido;
+
+        try {
+            const resultEmail = await sendEmail(dte, 'fesvprueba@gmail.com');
+            if (!resultEmail?.SUCCESS) {
+                throw 'Error al enviar el correo.';
+            }
+
+            // looking for document in db
+            const document = await db.Document.findOne({ where: { generationCode: dte?.identificacion?.codigoGeneracion || '' } });
+            if (!document) {
+                // save document in db
+                await db.Document.create({
+                    generationCode: dte.identificacion.codigoGeneracion,
+                    controlNumber: dte.identificacion.numeroControl,
+                    receivedStamp: dte.selloRecibido,
+                    referenceId: req.params.id,
+                    timesSent: 1
+                });
+                countSent = 1;
+            } else {
+                // update times sent
+                await db.Document.update({ timesSent: parseInt(document.timesSent || 0) + 1 }, { where: { generationCode: dte?.identificacion?.codigoGeneracion || '' } });
+                countSent = parseInt(document.timesSent || 0) + 1;
+            }
+        } catch (error) {
+            console.log(error);
+            throw 'Error al enviar el correo.';
         }
 
-        if (dte.sujetoExcluido) {
-            dte.sujetoExcluido.correo = document.Customer.email;
-        }
-
-        await sendEmail(dte);
-
-        // update times sent
-        await db.Document.update({ timesSent: parseInt(document.timesSent || 0) + 1 }, { where: { id: document.id } });
-        return res.status(200).json({ message: 'Correo reenviado correctamente.' });
+        return res.status(200).json({ message: 'Correo reenviado correctamente.', result: { DocNum: req.params.id,  timesSent: countSent} });
     } catch (error) {
         console.log(error);
         return res.status(INTERNAL_SERVER_ERROR).json({ message: typeof error === 'string' ? error : 'Error al reenviar el correo.' });
@@ -136,17 +210,22 @@ export const getPdf = async (req, res) => {
             throw 'El id del documento es requerido.';
         }
 
-        const document = await db.Document.findByPk(req.params.id, {
-            attributes: ['id', 'generationCode', 'dteJson'],
-        });
-        const dte = JSON.parse(document.dteJson);
-        // dte.identificacion.selloRecibido = document.receivedStamp;
+        const result = await executeHanaSelectQuery(`SELECT "Json" FROM "PRUEBAS_MAZEL"."B1View_FeJson" WHERE "DocNum" = '${req.params.id}'`);
 
+        if (result.length === 0) {
+            throw 'Documento no encontrado.';
+        }
+        const dte = JSON.parse(result[0].Json);
+        if (!dte?.identificacion?.numeroControl) {
+            throw 'Documento no cumple el esquema.';
+        }
+        dte.identificacion.selloRecibido = dte.selloRecibido;
+        
         // stream the pdf
         const pdf = await generatePdf(dte);
 
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="${document.generationCode}.pdf""`);
+        res.setHeader('Content-Disposition', `attachment; filename="${dte.identificacion.codigoGeneracion || 'fesv'}.pdf""`);
         
         // Transmitir el stream del PDF directamente al cliente
         pdf.pipe(res);

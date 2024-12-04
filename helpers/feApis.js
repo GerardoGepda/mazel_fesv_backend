@@ -77,7 +77,7 @@ export const loginMHApi = async () => {
 };
 
 // function to send email
-export const sendEmail = async (dte) => {
+export const sendEmail = async (dte, email = null) => {
     try {
         const options = {
             headers: {
@@ -89,7 +89,8 @@ export const sendEmail = async (dte) => {
     
         const data = {
             typeDocument: parseInt(dte.identificacion.tipoDte),
-            dte
+            dte,
+            email
         };
     
         const response = await axios.post(`${process.env.MH_FE_EMAIL_API_URL}/send-email`, data, options);
