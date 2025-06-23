@@ -65,31 +65,39 @@ export const getHanaDocumentsByRangeDate = async (req, res) => {
         }
 
         // getting data from hana connection
-        const result = await executeHanaSelectQuery(`SELECT * FROM "PRUEBAS_MAZEL"."B1View_FeJson" WHERE "Fecha" >= '${initialDate}' AND "Fecha" <= '${finalDate}' ORDER BY "DocNum" ASC`);
-
+        const result = await executeHanaSelectQuery(`SELECT * FROM "PRUEBAS_MAZEL"."B1View_FeJson" WHERE "FECHA" >= '${initialDate}' AND "FECHA" <= '${finalDate}' ORDER BY "DocNum" ASC`);
+        
+        const finalData = [];
         // append Json.parse value of the "Json" property of each row
         for (let i = 0; i < result.length; i++) {
+            finalData.push({
+                DocNum: result[i].DocNum,
+                Json: result[i].JSON || null,
+                Correo: result[i].CORREO || null,
+                Fecha: result[i].FECHA,
+            });
+
             let tempJson = null;
             try {
-                tempJson = JSON.parse(result[i].Json || '{}');    
+                tempJson = JSON.parse(finalData[i].Json || '{}');    
             } catch (error) {
                 tempJson = null;
             }
             const document = await db.Document.findOne({ where: { generationCode: tempJson?.identificacion?.codigoGeneracion || '' } });
 
             if (document) {
-                result[i].timesSent = document.timesSent;
+                finalData[i].timesSent = document.timesSent;
             } else {
-                result[i].timesSent = 0;
+                finalData[i].timesSent = 0;
             }
 
-            result[i].detail = tempJson?.identificacion || null;
-            if (result[i].detail) {
-                result[i].detail.selloRecibido = tempJson?.selloRecibido || null;
+            finalData[i].detail = tempJson?.identificacion || null;
+            if (finalData[i].detail) {
+                finalData[i].detail.selloRecibido = tempJson?.selloRecibido || null;
             }
         }
 
-        return res.status(200).json(result);
+        return res.status(200).json(finalData);
     } catch (error) {
         console.log(error);
         return res.status(INTERNAL_SERVER_ERROR).json({ message: typeof error === 'string' ? error : 'Error al consultar documentos electrónicos.' });
@@ -158,7 +166,7 @@ export const forwardEmail = async (req, res) => {
             throw 'El id del documento es requerido.';
         }
 
-        const result = await executeHanaSelectQuery(`SELECT "Json", "Correo" FROM "PRUEBAS_MAZEL"."B1View_FeJson" WHERE "DocNum" = '${req.params.id}'`);
+        const result = await executeHanaSelectQuery(`SELECT "JSON" AS "Json", "CORREO" AS "Correo" FROM "PRUEBAS_MAZEL"."B1View_FeJson" WHERE "DocNum" = '${req.params.id}'`);
 
         if (result.length === 0) {
             throw 'Documento no encontrado.';
@@ -210,7 +218,7 @@ export const getPdf = async (req, res) => {
             throw 'El id del documento es requerido.';
         }
 
-        const result = await executeHanaSelectQuery(`SELECT "Json" FROM "PRUEBAS_MAZEL"."B1View_FeJson" WHERE "DocNum" = '${req.params.id}'`);
+        const result = await executeHanaSelectQuery(`SELECT "JSON" AS "Json" FROM "PRUEBAS_MAZEL"."B1View_FeJson" WHERE "DocNum" = '${req.params.id}'`);
 
         if (result.length === 0) {
             throw 'Documento no encontrado.';
