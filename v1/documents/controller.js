@@ -178,8 +178,8 @@ export const forwardEmail = async (req, res) => {
         dte.identificacion.selloRecibido = dte.selloRecibido;
 
         try {
-            const resultEmail = await sendEmail(dte, 'fesvprueba@gmail.com');
-            if (!resultEmail?.SUCCESS) {
+            const resultEmail = await sendEmail(dte, result[0].Correo || null);
+            if (!resultEmail?.ok) {
                 throw 'Error al enviar el correo.';
             }
 

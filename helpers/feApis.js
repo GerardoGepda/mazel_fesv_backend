@@ -88,9 +88,8 @@ export const sendEmail = async (dte, email = null) => {
         };
     
         const data = {
-            typeDocument: parseInt(dte.identificacion.tipoDte),
             dte,
-            email
+            emailTo: email
         };
     
         const response = await axios.post(`${process.env.MH_FE_EMAIL_API_URL}/send-email`, data, options);
@@ -109,7 +108,6 @@ export const generatePdf = async (dte) => {
         };
     
         const data = {
-            typeDocument: parseInt(dte.identificacion.tipoDte),
             dte
         };
     
