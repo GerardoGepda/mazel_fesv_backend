@@ -65,7 +65,7 @@ export const getHanaDocumentsByRangeDate = async (req, res) => {
         }
 
         // getting data from hana connection
-        const result = await executeHanaSelectQuery(`SELECT * FROM "PRUEBAS_MAZEL"."B1View_FeJson" WHERE "FECHA" >= '${initialDate}' AND "FECHA" <= '${finalDate}' ORDER BY "DocNum" ASC`);
+        const result = await executeHanaSelectQuery(`SELECT * FROM "REAL_MAZEL"."B1View_FeJson" WHERE "FECHA" >= '${initialDate}' AND "FECHA" <= '${finalDate}' ORDER BY "DocNum" ASC`);
         
         const finalData = [];
         // append Json.parse value of the "Json" property of each row
@@ -166,7 +166,7 @@ export const forwardEmail = async (req, res) => {
             throw 'El id del documento es requerido.';
         }
 
-        const result = await executeHanaSelectQuery(`SELECT "JSON" AS "Json", "CORREO" AS "Correo" FROM "PRUEBAS_MAZEL"."B1View_FeJson" WHERE "DocNum" = '${req.params.id}'`);
+        const result = await executeHanaSelectQuery(`SELECT "JSON" AS "Json", "CORREO" AS "Correo" FROM "REAL_MAZEL"."B1View_FeJson" WHERE "DocNum" = '${req.params.id}'`);
 
         if (result.length === 0) {
             throw 'Documento no encontrado.';
@@ -218,7 +218,7 @@ export const getPdf = async (req, res) => {
             throw 'El id del documento es requerido.';
         }
 
-        const result = await executeHanaSelectQuery(`SELECT "JSON" AS "Json" FROM "PRUEBAS_MAZEL"."B1View_FeJson" WHERE "DocNum" = '${req.params.id}'`);
+        const result = await executeHanaSelectQuery(`SELECT "JSON" AS "Json" FROM "REAL_MAZEL"."B1View_FeJson" WHERE "DocNum" = '${req.params.id}'`);
 
         if (result.length === 0) {
             throw 'Documento no encontrado.';
