@@ -3,7 +3,7 @@ import db from './models/index.cjs';
 import routes from './routes/index.js';
 import cors from 'cors';
 
-await db.sequelize.sync({ alter: true });
+// await db.sequelize.sync({ alter: true });
 
 const app = express();
 

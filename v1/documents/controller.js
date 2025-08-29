@@ -166,7 +166,7 @@ export const forwardEmail = async (req, res) => {
             throw 'El id del documento es requerido.';
         }
 
-        const result = await executeHanaSelectQuery(`SELECT "JSON" AS "Json", "CORREO" AS "Correo" FROM "REAL_MAZEL"."B1View_FeJson" WHERE "DocNum" = '${req.params.id}'`);
+        const result = await executeHanaSelectQuery(`SELECT "JSON" AS "Json", "CardCode", "U_OrdenCompra" FROM "REAL_MAZEL"."B1View_FeJson" WHERE "DocNum" = '${req.params.id}'`);
 
         if (result.length === 0) {
             throw 'Documento no encontrado.';
@@ -176,6 +176,26 @@ export const forwardEmail = async (req, res) => {
             throw 'Documento no cumple el esquema.';
         }
         dte.identificacion.selloRecibido = dte.selloRecibido;
+
+        // setting OC
+        if (result[0]?.U_OrdenCompra) {
+            dte.identificacion.ordenCompra = result[0].U_OrdenCompra;
+        }
+        
+        // finding barcodes in hana db
+        if (result[0].CardCode == 'C000138' && Array.isArray(dte?.cuerpoDocumento) && dte.cuerpoDocumento.length > 0) {
+            const itemCodes = dte.cuerpoDocumento.map(item => item.codigo);
+            const barCodes = await executeHanaSelectQuery(`SELECT * FROM "REAL_MAZEL"."B1View_FeJsonCodeBar" WHERE "ItemCode" IN ('${itemCodes.join("','")}')`);
+
+            // adding this to item description
+            dte.cuerpoDocumento = dte.cuerpoDocumento.map(item => {
+                const barCode = barCodes.find(bar => bar.ItemCode === item.codigo);
+                return {
+                    ...item,
+                    descripcion: barCode ? `${barCode.CodeBars} ${item.descripcion}` : item.descripcion
+                };
+            });
+        }
 
         try {
             const resultEmail = await sendEmail(dte, result[0].Correo || null);
@@ -218,8 +238,8 @@ export const getPdf = async (req, res) => {
             throw 'El id del documento es requerido.';
         }
 
-        const result = await executeHanaSelectQuery(`SELECT "JSON" AS "Json" FROM "REAL_MAZEL"."B1View_FeJson" WHERE "DocNum" = '${req.params.id}'`);
-
+        const result = await executeHanaSelectQuery(`SELECT "JSON" AS "Json", "CardCode", "U_OrdenCompra" FROM "REAL_MAZEL"."B1View_FeJson" WHERE "DocNum" = '${req.params.id}'`);
+        
         if (result.length === 0) {
             throw 'Documento no encontrado.';
         }
@@ -228,6 +248,26 @@ export const getPdf = async (req, res) => {
             throw 'Documento no cumple el esquema.';
         }
         dte.identificacion.selloRecibido = dte.selloRecibido;
+
+        // setting OC
+        if (result[0]?.U_OrdenCompra) {
+            dte.identificacion.ordenCompra = result[0].U_OrdenCompra;
+        }
+        
+        // finding barcodes in hana db
+        if (result[0].CardCode == 'C000138' && Array.isArray(dte?.cuerpoDocumento) && dte.cuerpoDocumento.length > 0) {
+            const itemCodes = dte.cuerpoDocumento.map(item => item.codigo);
+            const barCodes = await executeHanaSelectQuery(`SELECT * FROM "REAL_MAZEL"."B1View_FeJsonCodeBar" WHERE "ItemCode" IN ('${itemCodes.join("','")}')`);
+
+            // adding this to item description
+            dte.cuerpoDocumento = dte.cuerpoDocumento.map(item => {
+                const barCode = barCodes.find(bar => bar.ItemCode === item.codigo);
+                return {
+                    ...item,
+                    descripcion: barCode ? `${barCode.CodeBars} ${item.descripcion}` : item.descripcion
+                };
+            });
+        }
         
         // stream the pdf
         const pdf = await generatePdf(dte);
