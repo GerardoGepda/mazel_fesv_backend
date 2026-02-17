@@ -65,7 +65,8 @@ export const getHanaDocumentsByRangeDate = async (req, res) => {
         }
 
         // getting data from hana connection
-        const result = await executeHanaSelectQuery(`SELECT * FROM "REAL_MAZEL"."B1View_FeJson" WHERE "FECHA" >= '${initialDate}' AND "FECHA" <= '${finalDate}' ORDER BY "DocNum" ASC`);
+
+        const result = await executeHanaSelectQuery(`SELECT * FROM "REAL_AGN"."B1View_FeJson" WHERE "FECHA" >= '${initialDate}' AND "FECHA" <= '${finalDate}' ORDER BY "DocNum" ASC`);
 
         const parsedData = result.map(row => {
             let tempJson = null;
@@ -173,7 +174,7 @@ export const forwardEmail = async (req, res) => {
             throw 'El id del documento es requerido.';
         }
 
-        const result = await executeHanaSelectQuery(`SELECT "JSON" AS "Json", "CardCode", "U_OrdenCompra" FROM "REAL_MAZEL"."B1View_FeJson" WHERE "DocNum" = '${req.params.id}'`);
+        const result = await executeHanaSelectQuery(`SELECT "JSON" AS "Json", "CardCode", "U_OrdenCompra" FROM "REAL_AGN"."B1View_FeJson" WHERE "DocNum" = '${req.params.id}'`);
 
         if (result.length === 0) {
             throw 'Documento no encontrado.';
@@ -192,7 +193,7 @@ export const forwardEmail = async (req, res) => {
         // finding barcodes in hana db
         if (result[0].CardCode == 'C000138' && Array.isArray(dte?.cuerpoDocumento) && dte.cuerpoDocumento.length > 0) {
             const itemCodes = dte.cuerpoDocumento.map(item => item.codigo);
-            const barCodes = await executeHanaSelectQuery(`SELECT * FROM "REAL_MAZEL"."B1View_FeJsonCodeBar" WHERE "ItemCode" IN ('${itemCodes.join("','")}')`);
+            const barCodes = await executeHanaSelectQuery(`SELECT * FROM "REAL_AGN"."B1View_FeJsonCodeBar" WHERE "ItemCode" IN ('${itemCodes.join("','")}')`);
 
             // adding this to item description
             dte.cuerpoDocumento = dte.cuerpoDocumento.map(item => {
@@ -245,7 +246,7 @@ export const getPdf = async (req, res) => {
             throw 'El id del documento es requerido.';
         }
 
-        const result = await executeHanaSelectQuery(`SELECT "JSON" AS "Json", "CardCode", "U_OrdenCompra" FROM "REAL_MAZEL"."B1View_FeJson" WHERE "DocNum" = '${req.params.id}'`);
+        const result = await executeHanaSelectQuery(`SELECT "JSON" AS "Json", "CardCode", "U_OrdenCompra" FROM "REAL_AGN"."B1View_FeJson" WHERE "DocNum" = '${req.params.id}'`);
         
         if (result.length === 0) {
             throw 'Documento no encontrado.';
@@ -264,7 +265,7 @@ export const getPdf = async (req, res) => {
         // finding barcodes in hana db
         if (result[0].CardCode == 'C000138' && Array.isArray(dte?.cuerpoDocumento) && dte.cuerpoDocumento.length > 0) {
             const itemCodes = dte.cuerpoDocumento.map(item => item.codigo);
-            const barCodes = await executeHanaSelectQuery(`SELECT * FROM "REAL_MAZEL"."B1View_FeJsonCodeBar" WHERE "ItemCode" IN ('${itemCodes.join("','")}')`);
+            const barCodes = await executeHanaSelectQuery(`SELECT * FROM "REAL_AGN"."B1View_FeJsonCodeBar" WHERE "ItemCode" IN ('${itemCodes.join("','")}')`);
 
             // adding this to item description
             dte.cuerpoDocumento = dte.cuerpoDocumento.map(item => {
