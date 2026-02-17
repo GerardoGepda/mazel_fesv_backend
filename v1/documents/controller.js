@@ -65,7 +65,6 @@ export const getHanaDocumentsByRangeDate = async (req, res) => {
         }
 
         // getting data from hana connection
-
         const result = await executeHanaSelectQuery(`SELECT * FROM "REAL_AGN"."B1View_FeJson" WHERE "FECHA" >= '${initialDate}' AND "FECHA" <= '${finalDate}' ORDER BY "DocNum" ASC`);
 
         const parsedData = result.map(row => {
