@@ -80,8 +80,7 @@ export const getHanaDocumentsByRangeDate = async (req, res) => {
                 Json: row.JSON || null,
                 Correo: row.CORREO || null,
                 Fecha: row.FECHA,
-                detail: tempJson?.identificacion || null,
-                selloRecibido: tempJson?.selloRecibido || null,
+                detail: tempJson?.identificacion ? {...tempJson.identificacion, selloRecibido: tempJson?.selloRecibido || null} : null,
             };
         });
 
@@ -100,7 +99,6 @@ export const getHanaDocumentsByRangeDate = async (req, res) => {
             Correo: item.Correo,
             Fecha: item.Fecha,
             detail: item.detail,
-            selloRecibido: item.selloRecibido,
             timesSent: docMap.get(item.detail?.codigoGeneracion) || 0
         }));
 
