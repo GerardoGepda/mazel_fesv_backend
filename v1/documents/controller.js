@@ -66,36 +66,43 @@ export const getHanaDocumentsByRangeDate = async (req, res) => {
 
         // getting data from hana connection
         const result = await executeHanaSelectQuery(`SELECT * FROM "REAL_MAZEL"."B1View_FeJson" WHERE "FECHA" >= '${initialDate}' AND "FECHA" <= '${finalDate}' ORDER BY "DocNum" ASC`);
-        
-        const finalData = [];
-        // append Json.parse value of the "Json" property of each row
-        for (let i = 0; i < result.length; i++) {
-            finalData.push({
-                DocNum: result[i].DocNum,
-                Json: result[i].JSON || null,
-                Correo: result[i].CORREO || null,
-                Fecha: result[i].FECHA,
-            });
 
+        const parsedData = result.map(row => {
             let tempJson = null;
             try {
-                tempJson = JSON.parse(finalData[i].Json || '{}');    
+                tempJson = JSON.parse(row.JSON || '{}');    
             } catch (error) {
                 tempJson = null;
             }
-            const document = await db.Document.findOne({ where: { generationCode: tempJson?.identificacion?.codigoGeneracion || '' } });
 
-            if (document) {
-                finalData[i].timesSent = document.timesSent;
-            } else {
-                finalData[i].timesSent = 0;
-            }
+            return {
+                DocNum: row.DocNum,
+                Json: row.JSON || null,
+                Correo: row.CORREO || null,
+                Fecha: row.FECHA,
+                detail: tempJson?.identificacion || null,
+                selloRecibido: tempJson?.selloRecibido || null,
+            };
+        });
 
-            finalData[i].detail = tempJson?.identificacion || null;
-            if (finalData[i].detail) {
-                finalData[i].detail.selloRecibido = tempJson?.selloRecibido || null;
-            }
-        }
+        // filtering only rows with codigoGeneracion in the "Json" property
+        const generationCodes = parsedData.map(item => item.detail?.codigoGeneracion).filter(code => code);
+
+        const documentsInDb = generationCodes.length > 0 ? await db.Document.findAll({ 
+            attributes: ['generationCode', 'timesSent'],
+            where: { generationCode: { [Op.in]: generationCodes } } 
+        }) : [];
+        const docMap = new Map(documentsInDb.map(doc => [doc.generationCode, doc.timesSent]));
+
+        const finalData = parsedData.map(item => ({
+            DocNum: item.DocNum,
+            Json: item.Json,
+            Correo: item.Correo,
+            Fecha: item.Fecha,
+            detail: item.detail,
+            selloRecibido: item.selloRecibido,
+            timesSent: docMap.get(item.detail?.codigoGeneracion) || 0
+        }));
 
         return res.status(200).json(finalData);
     } catch (error) {
