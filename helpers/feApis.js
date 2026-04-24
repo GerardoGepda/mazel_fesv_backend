@@ -77,7 +77,7 @@ export const loginMHApi = async () => {
 };
 
 // function to send email
-export const sendEmail = async (dte, email = null) => {
+export const sendEmail = async (dte, email = null, anulacionData = null) => {
     try {
         const options = {
             headers: {
@@ -91,6 +91,10 @@ export const sendEmail = async (dte, email = null) => {
             dte,
             emailTo: email
         };
+
+        if (anulacionData) {
+            data.anulacionData = anulacionData;
+        }
     
         const response = await axios.post(`${process.env.MH_FE_EMAIL_API_URL}/send-email`, data, options);
         return response.data;
@@ -101,7 +105,7 @@ export const sendEmail = async (dte, email = null) => {
 };
 
 // function to generate the pdf from email api
-export const generatePdf = async (dte) => {
+export const generatePdf = async (dte, anulacionData = null) => {
     try {
         const options = {
             responseType: 'stream',
@@ -110,6 +114,10 @@ export const generatePdf = async (dte) => {
         const data = {
             dte
         };
+
+        if (anulacionData) {
+            data.anulacionData = anulacionData;
+        }
     
         const response = await axios.post(`${process.env.MH_FE_EMAIL_API_URL}/create-pdf`, data, options);
         return response.data;

@@ -65,7 +65,7 @@ export const getHanaDocumentsByRangeDate = async (req, res) => {
         }
 
         // getting data from hana connection
-        const result = await executeHanaSelectQuery(`SELECT * FROM "REAL_AGN"."B1View_FeJson" WHERE "FECHA" >= '${initialDate}' AND "FECHA" <= '${finalDate}' ORDER BY "DocNum" ASC`);
+        const result = await executeHanaSelectQuery(`SELECT * FROM "REAL_AGN"."B1View_FeJsonAnul" WHERE "FECHA" >= '${initialDate}' AND "FECHA" <= '${finalDate}' ORDER BY "DocNum" ASC`);
 
         const parsedData = result.map(row => {
             let tempJson = null;
@@ -80,6 +80,8 @@ export const getHanaDocumentsByRangeDate = async (req, res) => {
                 Json: row.JSON || null,
                 Correo: row.CORREO || null,
                 Fecha: row.FECHA,
+                canceled: Boolean((row.DocCancelacion ?? null)),
+                canceledStamp: row.NOCONTROL ?? "",
                 detail: tempJson?.identificacion ? {...tempJson.identificacion, selloRecibido: tempJson?.selloRecibido || null} : null,
             };
         });
@@ -98,6 +100,8 @@ export const getHanaDocumentsByRangeDate = async (req, res) => {
             Json: item.Json,
             Correo: item.Correo,
             Fecha: item.Fecha,
+            canceled: item.canceled,
+            canceledStamp: item.canceledStamp,
             detail: item.detail,
             timesSent: docMap.get(item.detail?.codigoGeneracion) || 0
         }));
@@ -171,7 +175,7 @@ export const forwardEmail = async (req, res) => {
             throw 'El id del documento es requerido.';
         }
 
-        const result = await executeHanaSelectQuery(`SELECT "JSON" AS "Json", "CardCode", "U_OrdenCompra" FROM "REAL_AGN"."B1View_FeJson" WHERE "DocNum" = '${req.params.id}'`);
+        const result = await executeHanaSelectQuery(`SELECT "JSON" AS "Json", "CardCode", "U_OrdenCompra", "DocCancelacion", "NOCONTROL" AS "canceledStamp" FROM "REAL_AGN"."B1View_FeJsonAnul" WHERE "DocNum" = '${req.params.id}'`);
 
         if (result.length === 0) {
             throw 'Documento no encontrado.';
@@ -185,6 +189,15 @@ export const forwardEmail = async (req, res) => {
         // setting OC
         if (result[0]?.U_OrdenCompra) {
             dte.identificacion.ordenCompra = result[0].U_OrdenCompra;
+        }
+
+        // setting anulation data if document is canceled
+        let anulacionData = null;
+        if (result[0].DocCancelacion) {
+            anulacionData = {
+                selloRecibido: result[0].canceledStamp,
+                codigoGeneracion: crypto.randomUUID().toUpperCase(),
+            };
         }
         
         // finding barcodes in hana db
@@ -203,7 +216,7 @@ export const forwardEmail = async (req, res) => {
         }
 
         try {
-            const resultEmail = await sendEmail(dte, result[0].Correo || null);
+            const resultEmail = await sendEmail(dte, result[0].Correo || null, anulacionData);
             if (!resultEmail?.ok) {
                 throw 'Error al enviar el correo.';
             }
@@ -243,7 +256,7 @@ export const getPdf = async (req, res) => {
             throw 'El id del documento es requerido.';
         }
 
-        const result = await executeHanaSelectQuery(`SELECT "JSON" AS "Json", "CardCode", "U_OrdenCompra" FROM "REAL_AGN"."B1View_FeJson" WHERE "DocNum" = '${req.params.id}'`);
+        const result = await executeHanaSelectQuery(`SELECT "JSON" AS "Json", "CardCode", "U_OrdenCompra", "DocCancelacion", "NOCONTROL" AS "canceledStamp" FROM "REAL_AGN"."B1View_FeJsonAnul" WHERE "DocNum" = '${req.params.id}'`);
         
         if (result.length === 0) {
             throw 'Documento no encontrado.';
@@ -257,6 +270,15 @@ export const getPdf = async (req, res) => {
         // setting OC
         if (result[0]?.U_OrdenCompra) {
             dte.identificacion.ordenCompra = result[0].U_OrdenCompra;
+        }
+
+        // setting anulation data if document is canceled
+        let anulacionData = null;
+        if (result[0].DocCancelacion) {
+            anulacionData = {
+                selloRecibido: result[0].canceledStamp,
+                codigoGeneracion: crypto.randomUUID().toUpperCase(),
+            };
         }
         
         // finding barcodes in hana db
@@ -275,7 +297,7 @@ export const getPdf = async (req, res) => {
         }
         
         // stream the pdf
-        const pdf = await generatePdf(dte);
+        const pdf = await generatePdf(dte, anulacionData);
 
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="${dte.identificacion.codigoGeneracion || 'fesv'}.pdf""`);
