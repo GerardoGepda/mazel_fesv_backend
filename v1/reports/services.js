@@ -79,14 +79,11 @@ const drawHeader = (doc, header) => {
         { label: 'N° de Control', value: header.NumAtCard },
         { label: 'Código de Cliente', value: header.CardCode },
         { label: 'Fecha', value: formatDate(header.DocDate) },
-        { label: 'Código de Bodega', value: header.WhsCode },
-        { label: 'Bodega', value: header.WhsName },
-        { label: 'Comentarios', value: header.Comments },
     ];
 
     const colWidth = CONTENT_WIDTH / 2;
     const rowHeight = 22;
-    const gridFields = fields.slice(0, 6);
+    const gridFields = fields;
 
     gridFields.forEach((field, i) => {
         const col = i % 2;
@@ -106,7 +103,7 @@ const drawHeader = (doc, header) => {
     const fullWidthY = infoY + Math.ceil(gridFields.length / 2) * rowHeight;
 
     // CardName — full width
-    doc.rect(MARGIN, fullWidthY, CONTENT_WIDTH, rowHeight + 6).fill(COLORS.white);
+    doc.rect(MARGIN, fullWidthY, CONTENT_WIDTH, rowHeight + 6).fill(COLORS.accent);
     doc.fontSize(7).fillColor(COLORS.muted)
         .text('CLIENTE', MARGIN + 8, fullWidthY + 3, { width: CONTENT_WIDTH - 16 });
     doc.fontSize(9).fillColor(COLORS.text)
@@ -114,7 +111,7 @@ const drawHeader = (doc, header) => {
 
     // Comments — full width
     const commentsY = fullWidthY + rowHeight + 6;
-    doc.rect(MARGIN, commentsY, CONTENT_WIDTH, rowHeight + 6).fill(COLORS.accent);
+    doc.rect(MARGIN, commentsY, CONTENT_WIDTH, rowHeight + 6).fill(COLORS.white);
     doc.fontSize(7).fillColor(COLORS.muted)
         .text('COMENTARIOS', MARGIN + 8, commentsY + 3, { width: CONTENT_WIDTH - 16 });
     doc.fontSize(9).fillColor(COLORS.text)
@@ -143,15 +140,16 @@ const drawTableHeader = (doc, y) => {
 };
 
 const getColumns = () => [
-    { key: 'ItemCode',   label: 'Código',      width: 60,  align: 'left' },
-    { key: 'Dscription', label: 'Descripción', width: 232, align: 'left' },
-    { key: 'Quantity',   label: 'Cantidad',    width: 55,  align: 'right' },
-    { key: 'Price',      label: 'Precio',      width: 65,  align: 'right' },
-    { key: 'DiscPrcnt',  label: 'Desc. %',     width: 50,  align: 'right' },
-    { key: 'LineTotal',  label: 'Total',        width: 70,  align: 'right' },
+    { key: 'ItemCode',   label: 'Código',      width: 55,  align: 'left' },
+    { key: 'Dscription', label: 'Descripción', width: 175, align: 'left' },
+    { key: 'Warehouse',  label: 'Bodega',      width: 100, align: 'left' },
+    { key: 'Quantity',   label: 'Cantidad',    width: 50,  align: 'right' },
+    { key: 'Price',      label: 'Precio',      width: 55,  align: 'right' },
+    { key: 'DiscPrcnt',  label: 'Desc. %',     width: 45,  align: 'right' },
+    { key: 'LineTotal',  label: 'Total',        width: 52,  align: 'right' },
 ];
 
-const ROW_HEIGHT = 20;
+const ROW_HEIGHT = 32;
 
 const drawRow = (doc, row, y, isAlt) => {
     const cols = getColumns();
@@ -163,6 +161,7 @@ const drawRow = (doc, row, y, isAlt) => {
     const values = {
         ItemCode: row.ItemCode ?? '-',
         Dscription: row.Dscription ?? '-',
+        Warehouse: `${row.WhsCode ?? '-'} - ${row.WhsName ?? '-'}`,
         Quantity: formatNumber(row.Quantity, 3),
         Price: `$${formatNumber(row.Price)}`,
         DiscPrcnt: `${formatNumber(row.DiscPrcnt, 2)}%`,
@@ -170,11 +169,13 @@ const drawRow = (doc, row, y, isAlt) => {
     };
 
     cols.forEach((col) => {
+        const isMultiLine = col.key === 'Dscription' || col.key === 'Warehouse';
         doc.fontSize(8).fillColor(COLORS.text)
-            .text(values[col.key], x + 4, y + 6, {
+            .text(values[col.key], x + 4, y + 8, {
                 width: col.width - 8,
+                height: ROW_HEIGHT - 10,
                 align: col.align ?? 'left',
-                lineBreak: false,
+                lineBreak: isMultiLine,
                 ellipsis: true,
             });
         x += col.width;
@@ -253,11 +254,12 @@ export const generateWarehouseReportPdf = async (data) => {
         const total = rows.reduce((sum, r) => sum + parseFloat(r.LineTotal || 0), 0);
         const totalsY = currentY + 4;
 
+        const totalColWidth = 90;
         doc.rect(MARGIN, totalsY, CONTENT_WIDTH, TOTAL_ROW_HEIGHT).fill(COLORS.primary);
         doc.fontSize(9).fillColor(COLORS.white)
-            .text('TOTAL', MARGIN + 4, totalsY + 7, { width: CONTENT_WIDTH - 80, align: 'right' });
+            .text('TOTAL', MARGIN + 4, totalsY + 7, { width: CONTENT_WIDTH - totalColWidth - 4, align: 'right' });
         doc.fontSize(9).fillColor(COLORS.white)
-            .text(`$${formatNumber(total)}`, MARGIN + CONTENT_WIDTH - 74, totalsY + 7, { width: 66, align: 'right' });
+            .text(`$${formatNumber(total)}`, MARGIN + CONTENT_WIDTH - totalColWidth, totalsY + 7, { width: totalColWidth - 4, align: 'right' });
 
         // Dibuja footers ahora que sabemos el total de páginas
         const totalPages = pageNum;
