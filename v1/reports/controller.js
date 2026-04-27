@@ -8,7 +8,7 @@ export const warehouseReport = async (req, res) => {
             return res.status(400).json({ message: 'El número de documento es requerido.' });
         }
 
-        const result = await executeHanaSelectQuery(`SELECT * FROM "REAL_MAZEL"."B1View_FacturasBodega" WHERE "DocNum" = '${docNum}'`);
+        const result = await executeHanaSelectQuery(`SELECT * FROM "REAL_AGN"."B1View_FacturaBodega" WHERE "DocNum" = '${docNum}'`);
         if (!result || result.length === 0) {
             return res.status(404).json({ message: 'No se encontraron datos para el número de documento proporcionado.' });
         }

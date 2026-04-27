@@ -21,7 +21,7 @@ const LOGO_PATH = join(__dirname, 'logos', 'logo.png');
 
 const COLORS = {
     primary: '#63ab30',
-    secondary: '#f6991d',
+    secondary: '#f8b82a',
     accent: '#f9fff5',
     white: '#ffffff',
     text: '#1a1a1a',
