@@ -14,6 +14,7 @@ import customerRoutes from '../v1/customers/routes.js';
 import fceRoutes from '../v1/fce/routes.js';
 import seRoutes from '../v1/se/routes.js';
 import DocumentRoutes from '../v1/documents/routes.js';
+import reportRoutes from '../v1/reports/routes.js';
 
 const router = Router();
 
@@ -32,5 +33,6 @@ router.use('/customers', customerRoutes);
 router.use('/fce', fceRoutes);
 router.use('/se', seRoutes);
 router.use('/documents', DocumentRoutes);
+router.use('/reports', reportRoutes);
 
 export default router;
