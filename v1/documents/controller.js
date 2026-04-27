@@ -81,7 +81,7 @@ export const getHanaDocumentsByRangeDate = async (req, res) => {
                 Correo: row.CORREO || null,
                 Fecha: row.FECHA,
                 canceled: Boolean((row.DocCancelacion ?? null)),
-                canceledStamp: row.NOCONTROL ?? "",
+                canceledStamp: row.SELLORECEPCION ?? "",
                 detail: tempJson?.identificacion ? {...tempJson.identificacion, selloRecibido: tempJson?.selloRecibido || null} : null,
             };
         });
@@ -175,7 +175,7 @@ export const forwardEmail = async (req, res) => {
             throw 'El id del documento es requerido.';
         }
 
-        const result = await executeHanaSelectQuery(`SELECT "JSON" AS "Json", "CardCode", "U_OrdenCompra", "DocCancelacion", "NOCONTROL" AS "canceledStamp" FROM "REAL_MAZEL"."B1View_FeJsonAnul" WHERE "DocNum" = '${req.params.id}'`);
+        const result = await executeHanaSelectQuery(`SELECT "JSON" AS "Json", "CardCode", "U_OrdenCompra", "DocCancelacion", "SELLORECEPCION" AS "canceledStamp" FROM "REAL_MAZEL"."B1View_FeJsonAnul" WHERE "DocNum" = '${req.params.id}'`);
 
         if (result.length === 0) {
             throw 'Documento no encontrado.';
@@ -256,7 +256,7 @@ export const getPdf = async (req, res) => {
             throw 'El id del documento es requerido.';
         }
 
-        const result = await executeHanaSelectQuery(`SELECT "JSON" AS "Json", "CardCode", "U_OrdenCompra", "DocCancelacion", "NOCONTROL" AS "canceledStamp" FROM "REAL_MAZEL"."B1View_FeJsonAnul" WHERE "DocNum" = '${req.params.id}'`);
+        const result = await executeHanaSelectQuery(`SELECT "JSON" AS "Json", "CardCode", "U_OrdenCompra", "DocCancelacion", "SELLORECEPCION" AS "canceledStamp" FROM "REAL_MAZEL"."B1View_FeJsonAnul" WHERE "DocNum" = '${req.params.id}'`);
         
         if (result.length === 0) {
             throw 'Documento no encontrado.';
@@ -277,7 +277,7 @@ export const getPdf = async (req, res) => {
         if (result[0].DocCancelacion) {
             anulacionData = {
                 selloRecibido: result[0].canceledStamp,
-                codigoGeneracion: crypto.randomUUID().toUpperCase(),
+                codigoGeneracion: " ",
             };
         }
         
