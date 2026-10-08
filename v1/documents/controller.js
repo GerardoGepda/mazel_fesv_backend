@@ -201,7 +201,7 @@ export const forwardEmail = async (req, res) => {
         }
         
         // finding barcodes in hana db
-        if (result[0].CardCode == 'C000138' && Array.isArray(dte?.cuerpoDocumento) && dte.cuerpoDocumento.length > 0) {
+        if (['C000138', 'C001212'].includes(result[0].CardCode) && Array.isArray(dte?.cuerpoDocumento) && dte.cuerpoDocumento.length > 0) {
             const itemCodes = dte.cuerpoDocumento.map(item => item.codigo);
             const barCodes = await executeHanaSelectQuery(`SELECT * FROM "REAL_AGN"."B1View_FeJsonCodeBar" WHERE "ItemCode" IN ('${itemCodes.join("','")}')`);
 
@@ -210,7 +210,7 @@ export const forwardEmail = async (req, res) => {
                 const barCode = barCodes.find(bar => bar.ItemCode === item.codigo);
                 return {
                     ...item,
-                    descripcion: barCode ? `${barCode.CodeBars} ${item.descripcion}` : item.descripcion
+                    descripcion: barCode ? `${barCode.CodeBars} | ${item.descripcion}` : item.descripcion
                 };
             });
         }
@@ -282,7 +282,7 @@ export const getPdf = async (req, res) => {
         }
         
         // finding barcodes in hana db
-        if (result[0].CardCode == 'C000138' && Array.isArray(dte?.cuerpoDocumento) && dte.cuerpoDocumento.length > 0) {
+        if (['C000138', 'C001212'].includes(result[0].CardCode) && Array.isArray(dte?.cuerpoDocumento) && dte.cuerpoDocumento.length > 0) {
             const itemCodes = dte.cuerpoDocumento.map(item => item.codigo);
             const barCodes = await executeHanaSelectQuery(`SELECT * FROM "REAL_AGN"."B1View_FeJsonCodeBar" WHERE "ItemCode" IN ('${itemCodes.join("','")}')`);
 
@@ -291,7 +291,7 @@ export const getPdf = async (req, res) => {
                 const barCode = barCodes.find(bar => bar.ItemCode === item.codigo);
                 return {
                     ...item,
-                    descripcion: barCode ? `${barCode.CodeBars} ${item.descripcion}` : item.descripcion
+                    descripcion: barCode ? `${barCode.CodeBars} | ${item.descripcion}` : item.descripcion
                 };
             });
         }
